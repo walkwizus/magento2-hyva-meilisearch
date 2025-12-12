@@ -1,8 +1,23 @@
 <?php
-/** @var \Magento\Framework\Escaper $escaper */
-/** @var \Hyva\Theme\Model\ViewModelRegistry $viewModels */
-/** @var \Hyva\Theme\ViewModel\HeroiconsOutline $heroicons */
-$heroicons = $viewModels->require(\Hyva\Theme\ViewModel\HeroiconsOutline::class);
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HeroiconsOutline;
+use Magento\Framework\Escaper;
+use Walkwizus\MeilisearchFrontend\ViewModel\Ssr;
+
+/** @var Escaper $escaper */
+/** @var ViewModelRegistry $viewModels */
+/** @var HeroiconsOutline $heroicons */
+/** @var Ssr $ssr */
+
+$heroicons = $viewModels->require(HeroiconsOutline::class);
+$ssr = $viewModels->require(Ssr::class);
+$config = $ssr->getConfig();
+$availableSortBy = $config['availableSortBy'] ?? [];
+$selectedSortBy = $ssr->getSortBy();
+$isDescending = $ssr->isDescending();
 ?>
 <div
     class="toolbar-sorter sorter flex items-center order-1 col-span-3 sm:col-span-6 md:col-span-3 lg:col-span-6 justify-end"
@@ -14,18 +29,18 @@ $heroicons = $viewModels->require(\Hyva\Theme\ViewModel\HeroiconsOutline::class)
             name="sorter"
             class="form-select sorter-options"
             aria-label="<?= $escaper->escapeHtmlAttr(__('Sort By')) ?>"
-            :value="$store.meilisearch.state.sortBy"
             @change="$store.meilisearch.setSortBy($event.target.value)"
         >
-            <template
-                x-for="([orderCode, orderLabel]) in Object.entries($store.meilisearch.meilisearchConfig.availableSortBy || {})"
-                :key="orderCode"
-            >
-                <option :value="orderCode" x-text="orderLabel"></option>
-            </template>
+            <?php foreach ($availableSortBy as $code => $label): ?>
+                <option
+                    value="<?= $escaper->escapeHtmlAttr((string) $code) ?>"
+                    <?= ((string) $code === $selectedSortBy) ? 'selected' : '' ?>
+                >
+                    <?= $escaper->escapeHtml((string) $label) ?>
+                </option>
+            <?php endforeach; ?>
         </select>
     </label>
-
     <button
         x-show="$store.meilisearch.state.isDescending"
         title="<?= $escaper->escapeHtmlAttr(__('Set Ascending Direction')) ?>"

@@ -5,5 +5,9 @@
         <referenceBlock name="meilisearch.frontend.search">
             <block class="Magento\Catalog\Block\Product\ProductList\Toolbar" name="meilisearch.toolbar" template="Hyva_WalkwizusMeilisearch::toolbar.phtml"/>
         </referenceBlock>
+        <referenceBlock name="meilisearch.frontend.layers">
+            <block name="meilisearch.frontend.layers.swatch" template="Hyva_WalkwizusMeilisearch::layers/swatch.phtml"/>
+            <block name="meilisearch.frontend.layers.checkbox" template="Hyva_WalkwizusMeilisearch::layers/checkbox.phtml"/>
+        </referenceBlock>
     </body>
 </page>

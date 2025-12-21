@@ -6,7 +6,6 @@ use Magento\Framework\View\Element\Template;
 use Magento\Framework\Escaper;
 use Hyva\Theme\Model\ViewModelRegistry;
 use Hyva\Theme\ViewModel\HeroiconsOutline;
-use Magento\Swatches\ViewModel\Product\Renderer\Configurable as ConfigurableViewModel;
 use Walkwizus\MeilisearchFrontend\ViewModel\Ssr;
 
 /** @var Template $block */
@@ -15,8 +14,6 @@ use Walkwizus\MeilisearchFrontend\ViewModel\Ssr;
 
 /** @var HeroiconsOutline $heroicons */
 $heroicons = $viewModels->require(HeroiconsOutline::class);
-/** @var ConfigurableViewModel $configurableViewModel */
-$configurableViewModel = $viewModels->require(ConfigurableViewModel::class);
 $ssr = $viewModels->require(Ssr::class);
 $facets = $ssr->getFacets();
 ?>
@@ -135,7 +132,7 @@ $facets = $ssr->getFacets();
                     <button
                         type="button"
                         class="text-sm text-fg-secondary hover:text-fg"
-                        @click="$store.meilisearch.clearAllFacets && $store.meilisearch.clearAllFacets()"
+                        @click="$store.meilisearch.clearAllFacets()"
                     >
                         <?= $escaper->escapeHtml(__('Clear All')) ?>
                     </button>
@@ -211,76 +208,8 @@ $facets = $ssr->getFacets();
                         :id="`${id}-content`"
                         class="filter-options-content pt-3 space-y-1"
                     >
-                        <template x-if="facet.isSwatch">
-                            <div
-                                class="swatch-attribute swatch-layered"
-                                :class="facet.code"
-                                x-data="initMeilisearchLayeredSwatch()"
-                            >
-                                <div class="swatch-attribute-options clearfix">
-                                    <template
-                                        x-for="option in facet.options"
-                                        :key="facet.code + '-' + option.value"
-                                    >
-                                        <a
-                                            href="#"
-                                            rel="nofollow"
-                                            @click.prevent="$store.meilisearch.toggleFacet(facet.code, option.value)"
-                                            :aria-label="`<?= $escaper->escapeJs(__('Filter')) ?> ${facet.label} ${option.label}`"
-                                            class="swatch-option-link-layered swatch-option cursor-pointer bg-white shadow-sm relative select-none border-gray-300"
-                                            :class="{
-                                                'w-6 h-6': getSwatchType(option.swatchType) !== 'text',
-                                                'border-gray-100 ring ring-primary/50':
-                                                    $store.meilisearch.state.selectedFacets[facet.code]
-                                                    && $store.meilisearch.state.selectedFacets[facet.code].includes(option.value),
-                                                'border-gray-300':
-                                                    !$store.meilisearch.state.selectedFacets[facet.code]
-                                                    || !$store.meilisearch.state.selectedFacets[facet.code].includes(option.value),
-                                                'opacity-50 cursor-not-allowed': option.count === 0
-                                            }"
-                                            :style="getSwatchBackgroundStyle(option.swatchType, option.swatchValue, '')"
-                                            <?php if ($configurableViewModel->getShowSwatchTooltip()): ?>
-                                                @mouseenter.self="activeTooltipItem = {
-                                                    attribute: facet.code,
-                                                    type: '' + option.swatchType,
-                                                    id: '' + option.value,
-                                                    label: '' + option.label,
-                                                    thumb: '',
-                                                    value: '' + option.swatchValue
-                                                }; tooltipPositionElement = $event.target;"
-                                                @mouseleave.self="activeTooltipItem = false"
-                                            <?php endif; ?>
-                                        >
-                                            <template x-if="getSwatchType(option.swatchType) === 'text'">
-                                                <span x-text="option.swatchValue || option.label"></span>
-                                            </template>
-                                        </a>
-                                    </template>
-                                </div>
-                                <?php if ($configurableViewModel->getShowSwatchTooltip()): ?>
-                                    <?= /* @noEscape */ $block->getBlockHtml('product.swatch.tooltip') ?>
-                                <?php endif; ?>
-                            </div>
-                        </template>
-                        <template x-if="!facet.isSwatch">
-                            <div class="items">
-                                <template
-                                    x-for="option in facet.options"
-                                    :key="facet.code + '-' + option.value"
-                                >
-                                    <label class="flex items-center gap-2 cursor-pointer text-sm">
-                                        <input
-                                            type="checkbox"
-                                            class="rounded border-container"
-                                            :checked="$store.meilisearch.state.selectedFacets[facet.code] && $store.meilisearch.state.selectedFacets[facet.code].includes(option.value)"
-                                            @change="$store.meilisearch.toggleFacet(facet.code, option.value)"
-                                        >
-                                        <span class="flex-1" x-text="option.label"></span>
-                                        <span class="text-xs text-gray-400" x-text="option.count"></span>
-                                    </label>
-                                </template>
-                            </div>
-                        </template>
+                        <?= $block->getChildHtml('meilisearch.frontend.layers.swatch') ?>
+                        <?= $block->getChildHtml('meilisearch.frontend.layers.checkbox') ?>
                     </div>
                 </template>
             </div>

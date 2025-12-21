@@ -1,0 +1,69 @@
+<?php
+
+declare(strict_types=1);
+
+use Magento\Framework\View\Element\Template;
+use Magento\Framework\Escaper;
+use Hyva\Theme\Model\ViewModelRegistry;
+use Magento\Swatches\ViewModel\Product\Renderer\Configurable as ConfigurableViewModel;
+
+/**
+ * @var Template $block
+ * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
+ */
+
+$configurableViewModel = $viewModels->require(ConfigurableViewModel::class);
+?>
+
+<template x-if="facet.isSwatch">
+    <div
+        class="swatch-attribute swatch-layered"
+        :class="facet.code"
+        x-data="initMeilisearchLayeredSwatch()"
+    >
+        <div class="swatch-attribute-options clearfix">
+            <template
+                x-for="option in facet.options"
+                :key="facet.code + '-' + option.value"
+            >
+                <a
+                    href="#"
+                    rel="nofollow"
+                    @click.prevent="$store.meilisearch.toggleFacet(facet.code, option.value)"
+                    :aria-label="`<?= $escaper->escapeJs(__('Filter')) ?> ${facet.label} ${option.label}`"
+                    class="swatch-option-link-layered swatch-option cursor-pointer bg-white shadow-sm relative select-none border-gray-300"
+                    :class="{
+                                                'w-6 h-6': getSwatchType(option.swatchType) !== 'text',
+                                                'border-gray-100 ring ring-primary/50':
+                                                    $store.meilisearch.state.selectedFacets[facet.code]
+                                                    && $store.meilisearch.state.selectedFacets[facet.code].includes(option.value),
+                                                'border-gray-300':
+                                                    !$store.meilisearch.state.selectedFacets[facet.code]
+                                                    || !$store.meilisearch.state.selectedFacets[facet.code].includes(option.value),
+                                                'opacity-50 cursor-not-allowed': option.count === 0
+                                            }"
+                    :style="getSwatchBackgroundStyle(option.swatchType, option.swatchValue, '')"
+                    <?php if ($configurableViewModel->getShowSwatchTooltip()): ?>
+                        @mouseenter.self="activeTooltipItem = {
+                                                    attribute: facet.code,
+                                                    type: '' + option.swatchType,
+                                                    id: '' + option.value,
+                                                    label: '' + option.label,
+                                                    thumb: '',
+                                                    value: '' + option.swatchValue
+                                                }; tooltipPositionElement = $event.target;"
+                        @mouseleave.self="activeTooltipItem = false"
+                    <?php endif; ?>
+                >
+                    <template x-if="getSwatchType(option.swatchType) === 'text'">
+                        <span x-text="option.swatchValue || option.label"></span>
+                    </template>
+                </a>
+            </template>
+        </div>
+        <?php if ($configurableViewModel->getShowSwatchTooltip()): ?>
+            <?= /* @noEscape */ $block->getBlockHtml('product.swatch.tooltip') ?>
+        <?php endif; ?>
+    </div>
+</template>

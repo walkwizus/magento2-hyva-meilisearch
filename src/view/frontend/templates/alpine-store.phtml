@@ -274,6 +274,15 @@
                     this.performSearch();
                 },
 
+                clearAllFacets() {
+                    this.state.selectedFacets = {};
+                    this.state.page = 1;
+
+                    this.syncUrl();
+                    this.performSearch();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                },
+
                 limiterOptions() {
                     const mode = (this.viewModeState.mode || (this.meilisearchConfig.defaultViewMode || 'grid')).toLowerCase();
 

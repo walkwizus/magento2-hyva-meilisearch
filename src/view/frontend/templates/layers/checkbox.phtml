@@ -1,0 +1,19 @@
+<template x-if="!facet.isSwatch">
+    <div class="items">
+        <template
+            x-for="option in facet.options"
+            :key="facet.code + '-' + option.value"
+        >
+            <label class="flex items-center gap-2 cursor-pointer text-sm">
+                <input
+                    type="checkbox"
+                    class="rounded border-container"
+                    :checked="$store.meilisearch.state.selectedFacets[facet.code] && $store.meilisearch.state.selectedFacets[facet.code].includes(option.value)"
+                    @change="$store.meilisearch.toggleFacet(facet.code, option.value)"
+                >
+                <span class="flex-1" x-text="option.label"></span>
+                <span class="text-xs text-gray-400" x-text="option.count"></span>
+            </label>
+        </template>
+    </div>
+</template>

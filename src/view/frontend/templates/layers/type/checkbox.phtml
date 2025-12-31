@@ -1,4 +1,4 @@
-<template x-if="!facet.isSwatch && (facet.type === 'multiselect' || facet.type === 'select')">
+<template x-if="!facet.isSwatch && (facet.type === 'multiselect' || facet.type === 'select' || facet.type == 'boolean')">
     <div class="items">
         <template
             x-for="option in facet.options"

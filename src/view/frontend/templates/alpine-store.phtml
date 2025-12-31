@@ -461,6 +461,29 @@
                         : `${base}/${path}`;
                 },
 
+                getAutocompleteImage(hit) {
+                    const cfg = (this.meilisearchConfig.images && this.meilisearchConfig.images['mini_cart_product_thumbnail'])
+                        ? this.meilisearchConfig.images['mini_cart_product_thumbnail']
+                        : { type: 'thumbnail', width: 78, height: 78 };
+
+                    const type = cfg.type || 'thumbnail';
+                    const path = (hit[type] && hit[type] !== 'no_selection') ? hit[type]
+                        : (hit.thumbnail && hit.thumbnail !== 'no_selection') ? hit.thumbnail
+                            : (hit.small_image && hit.small_image !== 'no_selection') ? hit.small_image
+                                : (hit.image && hit.image !== 'no_selection') ? hit.image
+                                    : '';
+
+                    if (!path) return '';
+
+                    const base = (this.meilisearchConfig.mediaBaseUrl || '').replace(/\/+$/, '');
+                    const cleanPath = String(path).replace(/^\/+/, '');
+                    const hash = cfg.hash;
+
+                    return hash
+                        ? `${base}/cache/${hash}/${cleanPath}`
+                        : `${base}/${cleanPath}`;
+                },
+
                 getProductUrl(urlKey) {
                     const suffix  = this.meilisearchConfig.productUrlSuffix;
                     const baseUrl = this.meilisearchConfig.baseUrl;

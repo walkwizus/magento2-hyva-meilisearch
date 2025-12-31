@@ -40,7 +40,7 @@ $alias = (string) $block->getData('alias');
                         <template x-if="hit.image">
                             <img
                                 class="w-full h-full object-cover"
-                                :src="store.getProductImage(hit.image)"
+                                :src="store.getAutocompleteImage(hit)"
                                 :alt="hit.name || ''"
                                 loading="lazy"
                             >

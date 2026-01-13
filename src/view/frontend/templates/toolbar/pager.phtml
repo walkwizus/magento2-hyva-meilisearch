@@ -2,74 +2,103 @@
 
 declare(strict_types=1);
 
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\LucideIcons;
+use Walkwizus\MeilisearchFrontend\ViewModel\Ssr;
+use Walkwizus\MeilisearchFrontend\ViewModel\Ssr\Pagination;
+
 /** @var \Magento\Framework\View\Element\Template $block */
 /** @var \Magento\Framework\Escaper $escaper */
+/** @var ViewModelRegistry $viewModels */
 
-use Hyva\Theme\Model\ViewModelRegistry;
-use Hyva\ThemeViewModel\LucideIcons;
+$ssr = $viewModels->require(Ssr::class);
+$paginationViewModel = $viewModels->require(Pagination::class);
+$lucideIcons = $viewModels->require(LucideIcons::class);
 
-/** @var ViewModelRegistry|null $viewModels */
-$viewModels = $block->getData('viewModels') ?? null;
-/** @var LucideIcons|null $lucideIcons */
-$lucideIcons = $viewModels ? $viewModels->require(LucideIcons::class) : null;
+$searchResult = $ssr->getSearchResult();
+$config = $ssr->getConfig();
+$currentCategoryUrl = $config['currentCategoryUrl'] ?? $config['baseUrl'];
 
+if (!$paginationViewModel->hasPagination($searchResult)) {
+    return;
+}
+
+$currentPage = $paginationViewModel->getCurrentPage($searchResult);
+$lastPageNum = $paginationViewModel->getLastPageNum($searchResult);
+$framePages = $paginationViewModel->getFramePages($searchResult);
+
+$pagerItemClass = "btn btn-secondary border-1 border-gray-300 rounded-3xl p-2 text-sm min-w-9.5 flex items-center justify-center";
 $pagerIconSize = 20;
-$pagerItemClass = "btn btn-secondary border-1 border-gray-300 rounded-3xl p-2 text-sm min-w-9.5";
-
-$previousLabel = __('Previous Page');
-$nextLabel = __('Next Page');
 ?>
-<nav
-    class="pages flex justify-center order-2 col-span-4 gap-1"
-    aria-label="<?= $escaper->escapeHtmlAttr(__('pagination')) ?>"
->
-    <button
-        type="button"
+
+<nav class="pages flex justify-center order-2 col-span-4 gap-1" aria-label="<?= $escaper->escapeHtmlAttr(__('pagination')) ?>">
+    <a
+        href="<?= $escaper->escapeUrl($paginationViewModel->getPageUrl($currentCategoryUrl, max(1, $currentPage - 1))) ?>"
         class="pages-item-previous <?= $escaper->escapeHtmlAttr($pagerItemClass) ?>"
-        :class="!canGoPrev ? 'text-gray-400 border-gray-200 cursor-not-allowed' : 'text-gray-700'"
-        :aria-disabled="(!canGoPrev).toString()"
-        aria-label="<?= $escaper->escapeHtmlAttr($previousLabel) ?>"
-        @click="prevPage()"
+        :class="!canGoPrev ? 'text-gray-400 border-gray-200 cursor-not-allowed pointer-events-none' : 'text-gray-700'"
+        @click.prevent="prevPage()"
+        aria-label="<?= $escaper->escapeHtmlAttr(__('Previous Page')) ?>"
     >
-        <?php if ($lucideIcons): ?>
-            <?= /* @noEscape */ $lucideIcons->arrowLeftHtml('', $pagerIconSize, $pagerIconSize, ['aria-hidden' => 'true']); ?>
-        <?php else: ?>
-            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M12.5 15L7.5 10L12.5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+        <?= $lucideIcons->arrowLeftHtml('', $pagerIconSize, $pagerIconSize, ['aria-hidden' => 'true']); ?>
+    </a>
+
+    <ol class="inline-flex gap-1 items-center pages-items" x-show="!$store.meilisearch.isHydrated">
+        <?php if ($paginationViewModel->canShowFirst($framePages)): ?>
+            <li class="item">
+                <a href="<?= $escaper->escapeUrl($paginationViewModel->getPageUrl($currentCategoryUrl, 1)) ?>" class="<?= $escaper->escapeHtmlAttr($pagerItemClass) ?>">1</a>
+            </li>
         <?php endif; ?>
-    </button>
-    <ol class="inline-flex gap-1 items pages-items">
+
+        <?php if ($paginationViewModel->canShowPreviousJump($framePages)): ?>
+            <li class="item"><span class="<?= $escaper->escapeHtmlAttr($pagerItemClass) ?> border-none">...</span></li>
+        <?php endif; ?>
+
+        <?php foreach ($framePages as $page): ?>
+            <li class="item">
+                <a href="<?= $escaper->escapeUrl($paginationViewModel->getPageUrl($currentCategoryUrl, $page)) ?>"
+                   class="<?= $escaper->escapeHtmlAttr($pagerItemClass) ?> <?= $page === $currentPage ? 'bg-gray-100 border-primary font-bold' : '' ?>"
+                    <?= $page === $currentPage ? 'aria-current="page"' : '' ?>
+                >
+                    <?= $escaper->escapeHtml($page) ?>
+                </a>
+            </li>
+        <?php endforeach; ?>
+
+        <?php if ($paginationViewModel->canShowNextJump($framePages, $lastPageNum)): ?>
+            <li class="item"><span class="<?= $escaper->escapeHtmlAttr($pagerItemClass) ?> border-none">...</span></li>
+        <?php endif; ?>
+
+        <?php if ($paginationViewModel->canShowLast($framePages, $lastPageNum)): ?>
+            <li class="item">
+                <a href="<?= $escaper->escapeUrl($paginationViewModel->getPageUrl($currentCategoryUrl, $lastPageNum)) ?>" class="<?= $escaper->escapeHtmlAttr($pagerItemClass) ?>">
+                    <?= $escaper->escapeHtml($lastPageNum) ?>
+                </a>
+            </li>
+        <?php endif; ?>
+    </ol>
+
+    <ol class="inline-flex gap-1 items-center pages-items" x-cloak x-show="$store.meilisearch.isHydrated">
         <template x-for="page in visiblePages" :key="page">
             <li class="item">
-                <button
-                    type="button"
-                    class="page <?= $escaper->escapeHtmlAttr($pagerItemClass) ?>"
-                    :class="page === currentPage ? 'bg-gray-100 border-primary z-10' : ''"
+                <a
+                    :href="'?page=' + page"
+                    class="<?= $escaper->escapeHtmlAttr($pagerItemClass) ?>"
+                    :class="page === currentPage ? 'bg-gray-100 border-primary font-bold' : ''"
                     :aria-current="page === currentPage ? 'page' : null"
-                    :aria-label="page === currentPage
-                        ? '<?= $escaper->escapeJs(__("You\'re currently reading page")) ?> ' + page
-                        : '<?= $escaper->escapeJs(__("Page")) ?> ' + page"
-                    @click="goToPage(page)"
+                    @click.prevent="goToPage(page)"
                     x-text="page"
-                ></button>
+                ></a>
             </li>
         </template>
     </ol>
-    <button
-        type="button"
+
+    <a
+        href="<?= $escaper->escapeUrl($paginationViewModel->getPageUrl($currentCategoryUrl, min($lastPageNum, $currentPage + 1))) ?>"
         class="pages-item-next <?= $escaper->escapeHtmlAttr($pagerItemClass) ?>"
-        :class="!canGoNext ? 'text-gray-400 border-gray-200 cursor-not-allowed' : 'text-gray-700'"
-        :aria-disabled="(!canGoNext).toString()"
-        aria-label="<?= $escaper->escapeHtmlAttr($nextLabel) ?>"
-        @click="nextPage()"
+        :class="!canGoNext ? 'text-gray-400 border-gray-200 cursor-not-allowed pointer-events-none' : 'text-gray-700'"
+        @click.prevent="nextPage()"
+        aria-label="<?= $escaper->escapeHtmlAttr(__('Next Page')) ?>"
     >
-        <?php if ($lucideIcons): ?>
-            <?= /* @noEscape */ $lucideIcons->arrowRightHtml('', $pagerIconSize, $pagerIconSize, ['aria-hidden' => 'true']); ?>
-        <?php else: ?>
-            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M7.5 5L12.5 10L7.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-        <?php endif; ?>
-    </button>
+        <?= $lucideIcons->arrowRightHtml('', $pagerIconSize, $pagerIconSize, ['aria-hidden' => 'true']); ?>
+    </a>
 </nav>

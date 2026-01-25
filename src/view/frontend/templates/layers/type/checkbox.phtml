@@ -1,19 +1,43 @@
+<?php
+
+declare(strict_types=1);
+
+use Magento\Framework\Escaper;
+
+/**
+ * @var Escaper $escaper
+ */
+?>
+
 <template x-if="!facet.isSwatch && (facet.type === 'multiselect' || facet.type === 'select' || facet.type === 'boolean')">
-    <div class="items">
-        <template
-            x-for="option in facet.options"
-            :key="facet.code + '-' + option.value"
-        >
-            <label class="flex items-center gap-2 cursor-pointer text-sm">
-                <input
-                    type="checkbox"
-                    class="rounded border-container"
-                    :checked="$store.meilisearch.state.selectedFacets[facet.code] && $store.meilisearch.state.selectedFacets[facet.code].includes(option.value)"
-                    @change="$store.meilisearch.toggleFacet(facet.code, option.value)"
-                >
-                <span class="flex-1" x-text="option.label"></span>
-                <span class="text-xs text-gray-400" x-text="option.count"></span>
-            </label>
+    <div>
+        <div class="items space-y-2">
+            <template
+                x-for="option in facet.visibleOptions"
+                :key="facet.code + '-' + option.value"
+            >
+                <label class="flex items-center gap-2 cursor-pointer text-sm hover:text-primary transition-colors">
+                    <input
+                        type="checkbox"
+                        class="rounded border-container text-primary focus:ring-primary"
+                        :checked="option.selected"
+                        @change="$store.meilisearch.toggleFacet(facet.code, option.value)"
+                    >
+                    <span class="flex-1" x-text="option.label"></span>
+                    <span class="text-xs text-gray-400" x-text="option.count"></span>
+                </label>
+            </template>
+        </div>
+        <template x-if="facet.showMore && facet.options.length > facet.showMoreLimit && !$store.meilisearch.state.selectedFacets[facet.code]">
+            <button
+                type="button"
+                class="mt-2 text-sm text-primary hover:underline font-medium"
+                @click="$store.meilisearch.toggleShowMore(facet.code)"
+                x-text="facet.isShowMoreExpanded
+                    ? '<?= $escaper->escapeHtml(__('Show less')) ?>'
+                    : '<?= $escaper->escapeHtml(__('Show more (%1 more)')) ?>'.replace('%1', facet.options.length - facet.showMoreLimit)"
+            >
+            </button>
         </template>
     </div>
 </template>

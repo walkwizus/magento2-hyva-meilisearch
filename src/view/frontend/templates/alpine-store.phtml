@@ -27,6 +27,7 @@
                     facetStats: {},
                     sortBy: null,
                     isDescending: false,
+                    expandedFacets: []
                 },
 
                 viewModeState: {
@@ -184,6 +185,80 @@
                     document.dispatchEvent(new CustomEvent('meilisearch:results-updated'));
                 },
 
+                toggleShowMore(facetCode) {
+                    if (this.state.expandedFacets.includes(facetCode)) {
+                        this.state.expandedFacets = this.state.expandedFacets.filter(c => c !== facetCode);
+                    } else {
+                        this.state.expandedFacets.push(facetCode);
+                    }
+                },
+
+                getAvailableFacets() {
+                    if (!this.isHydrated || !this.state.results) {
+                        return [];
+                    }
+
+                    const facets = this.meilisearchFacets.getAvailableFacets(
+                        this.state.results,
+                        this.meilisearchConfig
+                    );
+
+                    return facets.map(facet => {
+                        const sortedOptions = this.sortFacetOptions([...facet.options], facet.sortValuesBy);
+                        const isShowMoreExpanded = this.state.expandedFacets.includes(facet.code);
+                        const visibleOptions = (facet.showMore && !isShowMoreExpanded && !this.state.selectedFacets[facet.code])
+                            ? sortedOptions.slice(0, facet.showMoreLimit)
+                            : sortedOptions;
+
+                        return {
+                            ...facet,
+                            options: sortedOptions,
+                            visibleOptions: visibleOptions,
+                            isShowMoreExpanded: isShowMoreExpanded
+                        };
+                    });
+                },
+
+                sortFacetOptions(options, sortType) {
+                    if (sortType === 'alpha') {
+                        return options.sort((a, b) => {
+                            const labelA = a.label || a.value || '';
+                            const labelB = b.label || b.value || '';
+                            return labelA.localeCompare(labelB);
+                        });
+                    }
+
+                    if (sortType === 'count') {
+                        return options.sort((a, b) => b.count - a.count);
+                    }
+
+                    return options;
+                },
+
+                toggleFacet(code, value) {
+                    const selected = { ...this.state.selectedFacets };
+                    const current = selected[code] ? [...selected[code]] : [];
+                    const idx = current.indexOf(value);
+
+                    if (idx === -1) {
+                        current.push(value);
+                    } else {
+                        current.splice(idx, 1);
+                    }
+
+                    if (current.length) {
+                        selected[code] = current;
+                    } else {
+                        delete selected[code];
+                    }
+
+                    this.state.selectedFacets = selected;
+                    this.state.page = 1;
+
+                    this.syncUrl();
+                    this.performSearch();
+                },
+
                 setViewMode(mode) {
                     const normalized = (mode || '').toLowerCase();
                     if (!normalized || this.viewModeState.mode === normalized) return;
@@ -236,68 +311,6 @@
                     }
 
                     this.state.isDescending = !this.state.isDescending;
-                    this.state.page = 1;
-
-                    this.syncUrl();
-                    this.performSearch();
-                },
-
-                getAvailableFacets() {
-                    if (!this.isHydrated || !this.state.results) {
-                        return [];
-                    }
-
-                    const facets = this.meilisearchFacets.getAvailableFacets(
-                        this.state.results,
-                        this.meilisearchConfig
-                    );
-
-                    return facets.map(facet => {
-                        const sortedOptions = this.sortFacetOptions([...facet.options], facet.sortValuesBy);
-                        return {
-                            ...facet,
-                            options: sortedOptions,
-                            visibleOptions: (facet.showMore && !this.state.selectedFacets[facet.code])
-                                ? sortedOptions.slice(0, facet.showMoreLimit)
-                                : sortedOptions
-                        };
-                    });
-                },
-
-                sortFacetOptions(options, sortType) {
-                    if (sortType === 'alpha') {
-                        return options.sort((a, b) => {
-                            const labelA = a.label || a.value || '';
-                            const labelB = b.label || b.value || '';
-                            return labelA.localeCompare(labelB);
-                        });
-                    }
-
-                    if (sortType === 'count') {
-                        return options.sort((a, b) => b.count - a.count);
-                    }
-
-                    return options;
-                },
-
-                toggleFacet(code, value) {
-                    const selected = { ...this.state.selectedFacets };
-                    const current = selected[code] ? [...selected[code]] : [];
-                    const idx = current.indexOf(value);
-
-                    if (idx === -1) {
-                        current.push(value);
-                    } else {
-                        current.splice(idx, 1);
-                    }
-
-                    if (current.length) {
-                        selected[code] = current;
-                    } else {
-                        delete selected[code];
-                    }
-
-                    this.state.selectedFacets = selected;
                     this.state.page = 1;
 
                     this.syncUrl();

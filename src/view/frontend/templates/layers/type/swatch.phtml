@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 
 use Magento\Framework\View\Element\Template;
@@ -24,7 +23,7 @@ $configurableViewModel = $viewModels->require(ConfigurableViewModel::class);
     >
         <div class="swatch-attribute-options clearfix">
             <template
-                x-for="option in facet.options"
+                x-for="option in facet.visibleOptions"
                 :key="facet.code + '-' + option.value"
             >
                 <a
@@ -62,6 +61,18 @@ $configurableViewModel = $viewModels->require(ConfigurableViewModel::class);
                 </a>
             </template>
         </div>
+        <template x-if="facet.showMore && facet.options.length > facet.showMoreLimit && !$store.meilisearch.state.selectedFacets[facet.code]">
+            <button
+                type="button"
+                class="mt-2 text-sm text-primary hover:underline font-medium"
+                @click="$store.meilisearch.toggleShowMore(facet.code)"
+                x-text="facet.isShowMoreExpanded
+                    ? '<?= $escaper->escapeHtml(__('Show less')) ?>'
+                    : '<?= $escaper->escapeHtml(__('Show more (%1 more)')) ?>'.replace('%1', facet.options.length - facet.showMoreLimit)"
+            >
+            </button>
+        </template>
+
         <?php if ($configurableViewModel->getShowSwatchTooltip()): ?>
             <?= /* @noEscape */ $block->getBlockHtml('product.swatch.tooltip') ?>
         <?php endif; ?>

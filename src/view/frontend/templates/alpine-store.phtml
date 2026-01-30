@@ -204,7 +204,12 @@
                     );
 
                     return facets.map(facet => {
-                        const sortedOptions = this.sortFacetOptions([...facet.options], facet.sortValuesBy);
+                        const selectedValues = this.state.selectedFacets[facet.code] || [];
+                        const optionsWithSelection = facet.options.map(option => ({
+                            ...option,
+                            selected: selectedValues.includes(String(option.value)) || selectedValues.includes(Number(option.value))
+                        }));
+                        const sortedOptions = this.sortFacetOptions([...optionsWithSelection], facet.sortValuesBy);
                         const isShowMoreExpanded = this.state.expandedFacets.includes(facet.code);
                         const visibleOptions = (facet.showMore && !isShowMoreExpanded && !this.state.selectedFacets[facet.code])
                             ? sortedOptions.slice(0, facet.showMoreLimit)

@@ -11,6 +11,17 @@ use Magento\Framework\Escaper;
 
 <template x-if="!facet.isSwatch && (facet.type === 'multiselect' || facet.type === 'select' || facet.type === 'boolean')">
     <div>
+        <template x-if="facet.searchable">
+            <div class="mb-2">
+                <input
+                    type="text"
+                    @input="$store.meilisearch.setFacetSearch(facet.code, $event.target.value)"
+                    :value="$store.meilisearch.state.facetSearchQueries[facet.code] || ''"
+                    :placeholder="'<?= $escaper->escapeHtml(__('Search')) ?> ' + facet.label"
+                    class="w-full px-2 py-1 border border-container rounded-md"
+                >
+            </div>
+        </template>
         <div class="items space-y-2">
             <template
                 x-for="option in facet.visibleOptions"
@@ -28,7 +39,7 @@ use Magento\Framework\Escaper;
                 </label>
             </template>
         </div>
-        <template x-if="facet.showMore && facet.options.length > facet.showMoreLimit && !$store.meilisearch.state.selectedFacets[facet.code]">
+        <template x-if="facet.showMore && facet.options.length > facet.showMoreLimit && !facet.currentSearchQuery">
             <button
                 type="button"
                 class="mt-2 text-sm text-primary hover:underline font-medium"

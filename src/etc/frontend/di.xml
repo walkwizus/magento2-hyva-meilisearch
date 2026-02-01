@@ -53,6 +53,11 @@
                     <item name="global" xsi:type="string">MeilisearchUrlManager</item>
                     <item name="src" xsi:type="string">Walkwizus_MeilisearchFrontend::js/service/url-manager.js</item>
                 </item>
+                <item name="meilisearch-fuse" xsi:type="array">
+                    <item name="name" xsi:type="string">meilisearchFuseLoader</item>
+                    <item name="global" xsi:type="string">Fuse</item>
+                    <item name="src" xsi:type="string">Walkwizus_MeilisearchFrontend::js/lib/fuse/fuse.min.js</item>
+                </item>
             </argument>
         </arguments>
     </type>

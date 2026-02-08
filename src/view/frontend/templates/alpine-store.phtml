@@ -103,6 +103,24 @@
                     this.isHydrated = true;
                 },
 
+                getHybridParams(query) {
+                    const config = this.meilisearchConfig.hybridSearch || {};
+                    if (config.enabled && query && query.trim().length > 0) {
+                        const params = {
+                            hybrid: {
+                                semanticRatio: parseFloat(config.semanticRatio),
+                                embedder: config.embedder
+                            }
+                        };
+
+                        if (config.rankingScoreThreshold !== undefined && config.rankingScoreThreshold !== null) {
+                            params.rankingScoreThreshold = parseFloat(config.rankingScoreThreshold);
+                        }
+                        return params;
+                    }
+                    return {};
+                },
+
                 async performSearch() {
                     this.state.isLoading = true;
 
@@ -117,18 +135,21 @@
                     const facetList = this.meilisearchConfig.facets.facetList;
                     const hitsPerPage = this.limiterState.perPage;
 
+                    const hybridParams = this.getHybridParams(searchQuery);
                     const index = meilisearchClient.index(this.meilisearchConfig.indexName);
 
                     if (!activeFacetCodes.length) {
                         const filters = this.buildFilter(selected);
 
-                        const res = await index.search(searchQuery, {
+                        const searchOptions = Object.assign({
                             page: currentPage,
                             hitsPerPage,
                             facets: facetList,
                             filter: filters.length ? filters : undefined,
                             sort: sortParams
-                        });
+                        }, hybridParams);
+
+                        const res = await index.search(searchQuery, searchOptions);
 
                         this.updateResults(res);
                         this.state.isLoading = false;
@@ -145,6 +166,15 @@
                         hitsPerPage: hitsPerPage,
                         sort: sortParams
                     });
+
+                    if (hybridParams.hybrid) {
+                        queries.forEach(query => {
+                            query.hybrid = hybridParams.hybrid;
+                            if (hybridParams.rankingScoreThreshold) {
+                                query.rankingScoreThreshold = hybridParams.rankingScoreThreshold;
+                            }
+                        });
+                    }
 
                     const res = await meilisearchClient.multiSearch({ queries });
 

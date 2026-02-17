@@ -277,9 +277,10 @@
                 sortFacetOptions(options, sortType) {
                     if (sortType === 'alpha') {
                         return options.sort((a, b) => {
-                            const labelA = a.label || a.value || '';
-                            const labelB = b.label || b.value || '';
-                            return labelA.localeCompare(labelB);
+                            const labelA = String(a.label || a.value || '');
+                            const labelB = String(b.label || b.value || '');
+
+                            return labelA.localeCompare(labelB, undefined, { numeric: true, sensitivity: 'base' });
                         });
                     }
 

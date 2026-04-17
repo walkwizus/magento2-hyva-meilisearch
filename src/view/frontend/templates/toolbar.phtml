@@ -1,10 +1,20 @@
 <?php
-/** @var \Magento\Framework\View\Element\Template $block */
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
+use Magento\Framework\View\Element\Template;
+
+/** @var Template $block */
+/** @var ViewModelRegistry $viewModels */
+/** @var HyvaCsp $hyvaCsp */
+$hyvaCsp = $viewModels->require(HyvaCsp::class);
 ?>
 <div
     class="toolbar toolbar-products grid grid-cols-4 sm:grid-cols-8 md:grid-cols-4
             lg:grid-cols-8 grid-flow-row gap-2 items-center"
-    x-data="meilisearchToolbar()"
+    x-data="meilisearchToolbar"
 >
     <?php if ($block->getIsBottom()): ?>
         <?= /** @noEscape */ $block->fetchView($block->getTemplateFile('Hyva_WalkwizusMeilisearch::toolbar/amount.phtml')) ?>
@@ -91,6 +101,49 @@
                     this.$store.meilisearch.nextPage();
                 }
             },
+
+            // CSP helper methods
+            hasMultiplePages() {
+                return this.totalPages > 1;
+            },
+
+            hasSinglePage() {
+                return this.totalPages <= 1;
+            },
+
+            hasSingleResult() {
+                return this.$store.meilisearch.state.totalHits === 1;
+            },
+
+            hasMultipleResults() {
+                return this.$store.meilisearch.state.totalHits !== 1;
+            },
+
+            prevBtnClass() {
+                return !this.canGoPrev
+                    ? 'text-gray-400 border-gray-200 cursor-not-allowed pointer-events-none'
+                    : 'text-gray-700';
+            },
+
+            nextBtnClass() {
+                return !this.canGoNext
+                    ? 'text-gray-400 border-gray-200 cursor-not-allowed pointer-events-none'
+                    : 'text-gray-700';
+            },
+
+            pageItemClass() {
+                return this.page === this.currentPage ? 'bg-gray-100 border-primary font-bold' : '';
+            },
+
+            isCurrentPage() {
+                return this.page === this.currentPage;
+            },
+
+            pageAriaCurrentAttr() {
+                return this.page === this.currentPage ? 'page' : null;
+            }
         }
     }
+    window.addEventListener('alpine:init', () => Alpine.data('meilisearchToolbar', meilisearchToolbar), {once: true})
 </script>
+<?php $hyvaCsp->registerInlineScript() ?>

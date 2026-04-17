@@ -2,16 +2,19 @@
 
 declare(strict_types=1);
 
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
 use Magento\Framework\View\Element\Template;
 use Magento\Framework\Escaper;
-use Hyva\Theme\Model\ViewModelRegistry;
 use Walkwizus\MeilisearchFrontend\ViewModel\Ssr;
 
 /**
  * @var Escaper $escaper
  * @var Template $block
  * @var ViewModelRegistry $viewModels
+ * @var HyvaCsp $hyvaCsp
  */
+$hyvaCsp = $viewModels->require(HyvaCsp::class);
 $ssr = $viewModels->require(Ssr::class);
 $config = $ssr->getConfig();
 $searchResult = $ssr->getSearchResult();
@@ -35,7 +38,7 @@ $clientSideRendering = $config['catalog_list_mode'];
         >
             <div
                 class="message info empty"
-                x-show="$store.meilisearch.state.totalHits === 0"
+                x-show="$store.meilisearch.isEmptyResults()"
             >
                 <div><?= $escaper->escapeHtml(__("We can't find products matching the selection.")) ?></div>
             </div>
@@ -54,7 +57,7 @@ $clientSideRendering = $config['catalog_list_mode'];
 
                 <div
                     id="meilisearch-product-list-container"
-                    :class="$store.meilisearch.state.isLoading ? 'opacity-50 pointer-events-none transition-opacity duration-200' : ''"
+                    :class="$store.meilisearch.loadingClass()"
                 >
                     <?php
                         $productCollection = $ssr->getProductCollection($searchResult);
@@ -66,7 +69,7 @@ $clientSideRendering = $config['catalog_list_mode'];
 
                 <div
                     x-cloak
-                    x-show="$store.meilisearch.state.totalHits === 0"
+                    x-show="$store.meilisearch.isEmptyResults()"
                     class="message info empty"
                 >
                     <div><?= $escaper->escapeHtml(__("We can't find products matching the selection.")) ?></div>
@@ -96,9 +99,7 @@ $clientSideRendering = $config['catalog_list_mode'];
                 <?= $block->getChildHtml('meilisearch.toolbar') ?>
                 <div
                     class="products wrapper mode-<?= /* @noEscape */$viewMode ?> products-<?= /* @noEscape */$viewMode ?>"
-                    :class="$store.meilisearch.viewModeState.mode === 'list'
-                    ? 'mode-list products-list'
-                    : 'mode-grid products-grid'"
+                    :class="$store.meilisearch.productWrapperClass()"
                 >
                     <?php
                     $gridClass = 'mx-auto pt-4 pb-12 grid gap-4 grid-cols-1 ' . ($viewIsGrid ? 'sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3' : '');
@@ -106,7 +107,7 @@ $clientSideRendering = $config['catalog_list_mode'];
                     <ul
                         role="list"
                         class="<?= $gridClass ?>"
-                        x-show="!$store.meilisearch.isHydrated"
+                        x-show="$store.meilisearch.isNotHydrated()"
                     >
                         <?php foreach ($searchResult['hits'] as $hit): ?>
                             <li class="flex flex-col">
@@ -145,45 +146,37 @@ $clientSideRendering = $config['catalog_list_mode'];
                         class="mx-auto pt-4 pb-12"
                         x-cloak
                         x-show="$store.meilisearch.isHydrated"
-                        :class="$store.meilisearch.viewModeState.mode === 'grid'
-                        ? 'grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
-                        : 'grid gap-4 grid-cols-1'"
+                        :class="$store.meilisearch.productGridUlClass()"
                     >
                         <template x-for="hit in $store.meilisearch.state.hits" :key="hit.id">
                             <li class="flex flex-col">
                                 <div
                                     class="item product product-item card card-interactive grow flex flex-col w-full"
-                                    :class="$store.meilisearch.viewModeState.mode === 'list' ? 'md:flex-row' : ''"
+                                    :class="$store.meilisearch.productItemClass()"
                                 >
                                     <a
                                         :href="$store.meilisearch.getProductUrl(hit.url_key)"
                                         :title="hit.name"
                                         class="product photo product-item-photo block mx-auto mb-3"
-                                        :class="$store.meilisearch.viewModeState.mode === 'list'
-                                        ? 'md:w-2/6 md:mb-0 md:shrink-0'
-                                        : ''"
+                                        :class="$store.meilisearch.productPhotoClass()"
                                         tabindex="-1"
                                     >
                                         <img
                                             class="product-image-photo"
                                             loading="lazy"
-                                            :width="$store.meilisearch.getListImageConfig().width"
-                                            :height="$store.meilisearch.getListImageConfig().height"
+                                            :width="$store.meilisearch.getListImageWidth()"
+                                            :height="$store.meilisearch.getListImageHeight()"
                                             :src="$store.meilisearch.getHitImageUrl(hit)"
                                             :alt="hit.name"
                                         />
                                     </a>
                                     <div
                                         class="product-info flex flex-col grow"
-                                        :class="$store.meilisearch.viewModeState.mode === 'list'
-                                        ? 'md:pl-5 md:w-4/6'
-                                        : ''"
+                                        :class="$store.meilisearch.productInfoClass()"
                                     >
                                         <div
                                             class="mt-2 mb-1 items-center justify-center font-semibold text-lg text-center"
-                                            :class="$store.meilisearch.viewModeState.mode === 'list'
-                                            ? 'md:text-left'
-                                            : ''"
+                                            :class="$store.meilisearch.productTitleClass()"
                                         >
                                             <a
                                                 class="product-item-link"
@@ -209,6 +202,7 @@ $clientSideRendering = $config['catalog_list_mode'];
 <script>
     window.meilisearchInitialState = <?= /* @noEscape */ json_encode($searchResult, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
+<?php $hyvaCsp->registerInlineScript() ?>
 
 <?php if (!$clientSideRendering): ?>
 <script>
@@ -240,6 +234,7 @@ $clientSideRendering = $config['catalog_list_mode'];
         <?php endif; ?>
     })();
 </script>
+<?php $hyvaCsp->registerInlineScript() ?>
 <?php else: ?>
 <script>
     (function () {
@@ -345,4 +340,5 @@ $clientSideRendering = $config['catalog_list_mode'];
         });
     })();
 </script>
+<?php $hyvaCsp->registerInlineScript() ?>
 <?php endif; ?>

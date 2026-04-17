@@ -16,13 +16,13 @@ $heroicons = $viewModels->require(HeroiconsOutline::class);
 
 <template x-if="hasActiveFilters">
     <div
-        x-data="{ open: true }"
+        x-data="initActiveFilters"
         class="filter-current bg-white border border-gray-300 p-4 md:px-8 md:mt-4 mb-4"
     >
         <h3 id="active-filtering-heading">
             <button
                 type="button"
-                @click="open = !open"
+                @click="toggle"
                 class="w-full filter-options-title flex justify-between items-center text-start cursor-pointer"
                 aria-controls="active-filtering-content"
                 :aria-expanded="open"
@@ -84,7 +84,7 @@ $heroicons = $viewModels->require(HeroiconsOutline::class);
             <button
                 type="button"
                 class="text-sm text-fg-secondary hover:text-fg"
-                @click="$store.meilisearch.clearAllFacets()"
+                @click="$store.meilisearch.clearAllFacets"
             >
                 <?= $escaper->escapeHtml(__('Clear All')) ?>
             </button>

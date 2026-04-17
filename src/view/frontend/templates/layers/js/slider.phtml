@@ -1,7 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
+
+/** @var ViewModelRegistry $viewModels */
+/** @var HyvaCsp $hyvaCsp */
+$hyvaCsp = $viewModels->require(HyvaCsp::class);
+?>
 <script>
-    function msPriceSlider(facet) {
+    function msPriceSlider() {
         return {
-            facet,
             min: 0,
             max: 0,
             minLimit: 0,
@@ -35,6 +45,33 @@
                 }, 0);
             },
 
+            hasTotalCount() {
+                return this.totalCount > 0;
+            },
+
+            totalCountText() {
+                const count = this.totalCount;
+                const labelProducts = this.$root.dataset.labelProducts || 'products';
+                const labelProduct = this.$root.dataset.labelProduct || 'product';
+                return count + ' ' + (count > 1 ? labelProducts : labelProduct);
+            },
+
+            trackStyle() {
+                const range = this.maxLimit - this.minLimit;
+                if (!range) return '';
+                const leftPct = ((this.min - this.minLimit) / range) * 100;
+                const rightPct = 100 - ((this.max - this.minLimit) / range) * 100;
+                return 'left: ' + leftPct + '%; right: ' + rightPct + '%';
+            },
+
+            setMin() {
+                this.min = Math.min(hyva.safeParseNumber(this.$event.target.value), this.max);
+            },
+
+            setMax() {
+                this.max = Math.max(hyva.safeParseNumber(this.$event.target.value), this.min);
+            },
+
             refresh() {
                 const stats = this.store.state.facetStats?.[this.facet.code] || {};
 
@@ -56,7 +93,7 @@
                 if (isDefault) {
                     delete state.selectedFacets[this.facet.code];
                 } else {
-                    state.selectedFacets[this.facet.code] = [`${this.min}_${this.max}`];
+                    state.selectedFacets[this.facet.code] = [this.min + '_' + this.max];
                 }
 
                 state.page = 1;
@@ -82,4 +119,6 @@
             }
         }
     }
+    window.addEventListener('alpine:init', () => Alpine.data('msPriceSlider', msPriceSlider), {once: true})
 </script>
+<?php $hyvaCsp->registerInlineScript() ?>

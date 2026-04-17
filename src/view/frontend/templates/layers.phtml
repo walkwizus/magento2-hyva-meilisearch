@@ -19,10 +19,10 @@ $facets = $ssr->getFacets();
 ?>
 
 <div
-    x-data="meilisearchLayeredNavigation()"
+    x-data="meilisearchLayeredNavigation"
     x-init="checkIsMobileResolution()"
-    @resize.window.debounce="checkIsMobileResolution()"
-    @visibilitychange.window.debounce="checkIsMobileResolution()"
+    @resize.window.debounce="checkIsMobileResolution"
+    @visibilitychange.window.debounce="checkIsMobileResolution"
     class="block border border-container bg-container-darker p-4 md:border-0 md:bg-transparent md:py-0 md:px-0 my-6"
     role="region"
     aria-label="<?= $escaper->escapeHtmlAttr(__('Product filters')) ?>"
@@ -30,12 +30,12 @@ $facets = $ssr->getFacets();
     <h2 id="filters-heading" class="block-title">
         <button
             type="button"
-            @click="blockOpen = !blockOpen"
+            @click="toggleBlockOpen"
             class="block-title flex items-center justify-between w-full text-start"
             aria-controls="filters-content"
             :aria-expanded="blockOpen"
-            :aria-disabled="!isMobile"
-            :disabled="!isMobile ? '' : null"
+            :aria-disabled="isMobile ? null : 'true'"
+            :disabled="isMobile ? null : ''"
         >
             <span class="text-md md:text-3xl font-medium uppercase">
                 <?= $escaper->escapeHtml(__('Shop By')) ?>
@@ -66,7 +66,7 @@ $facets = $ssr->getFacets();
         <?php foreach ($facets as $facet) : ?>
             <div
                 class="filter-option card my-4"
-                x-show="!$store.meilisearch || !$store.meilisearch.isHydrated"
+                x-show="$store.meilisearch.isNotHydrated()"
                 x-cloak
             >
                 <h3>
@@ -97,19 +97,19 @@ $facets = $ssr->getFacets();
         <?php endforeach; ?>
         <template x-for="facet in $store.meilisearch.getAvailableFacets()" :key="facet.code">
             <div
-                x-data="{ open: false, id: $id('filter-option') }"
+                x-data="initFilterOption"
                 x-defer="intersect"
                 class="filter-option card my-4"
-                x-show="$store.meilisearch && $store.meilisearch.isHydrated"
+                x-show="$store.meilisearch.isHydrated"
                 x-cloak
             >
-                <h3 :id="`${id}-title`">
+                <h3 :id="filterTitleId()">
                     <button
                         type="button"
-                        @click="open = !open"
+                        @click="toggle"
                         class="filter-options-title flex justify-between items-center cursor-pointer text-start hover:text-secondary-darker border-container w-full"
                         :class="{ 'border-b pb-4': open }"
-                        :aria-controls="`${id}-content`"
+                        :aria-controls="filterContentId()"
                         :aria-expanded="open"
                     >
                         <span class="title text-md md:text-lg font-semibold" x-text="facet.label"></span>
@@ -129,7 +129,7 @@ $facets = $ssr->getFacets();
                 </h3>
                 <template x-if="open">
                     <div
-                        :id="`${id}-content`"
+                        :id="filterContentId()"
                         class="filter-options-content pt-3 space-y-1"
                     >
                         <?= $block->getChildHtml('meilisearch.frontend.layers.type.swatch') ?>

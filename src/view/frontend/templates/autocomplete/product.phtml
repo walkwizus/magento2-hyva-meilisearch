@@ -11,16 +11,11 @@ use Magento\Framework\Escaper;
  */
 $alias = (string) $block->getData('alias');
 ?>
-<div class="flex flex-col gap-2">
+<div class="flex flex-col gap-2" x-data="initAutocompleteProduct">
     <div class="flex justify-start px-2">
         <span
             class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-medium text-gray-700"
-            x-text="
-                (store.autocomplete.results['<?= $escaper->escapeJs($alias) ?>']
-                    ? store.autocomplete.results['<?= $escaper->escapeJs($alias) ?>'].length
-                    : 0
-                ) + ' results'
-            "
+            x-text="resultCountLabel()"
         ></span>
     </div>
     <div class="grid grid-cols-2 gap-2">
@@ -32,8 +27,8 @@ $alias = (string) $block->getData('alias');
                 data-autocomplete-item
                 class="flex flex-col gap-2 p-2 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none cursor-pointer"
                 :href="store.getProductUrl(hit.url_key)"
-                @click="store.closeAutocomplete()"
-                @keydown.enter.prevent="$event.target.click()"
+                @click="store.closeAutocomplete"
+                @keydown.enter.prevent="clickSelf"
             >
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center shrink-0">
@@ -61,12 +56,48 @@ $alias = (string) $block->getData('alias');
                     class="text-sm font-semibold text-gray-900"
                     x-show="hit.price_0 !== undefined"
                 >
-                    <span x-text="new Intl.NumberFormat('fr-FR', {
-                        style: 'currency',
-                        currency: 'EUR'
-                    }).format(hit.price_0)"></span>
+                    <span x-text="formatPrice(hit.price_0)"></span>
                 </div>
             </a>
         </template>
     </div>
 </div>
+
+<script>
+    (function () {
+        var alias = '<?= $escaper->escapeJs($alias) ?>';
+        var labelResults = '<?= $escaper->escapeJs(__('results')) ?>';
+
+        function initAutocompleteProduct() {
+            return {
+                get store() {
+                    return Alpine.store('meilisearch');
+                },
+
+                resultCountLabel() {
+                    const results = this.store.autocomplete.results[alias];
+                    const count = results ? results.length : 0;
+                    return count + ' ' + labelResults;
+                },
+
+                formatPrice(value) {
+                    return new Intl.NumberFormat('fr-FR', {
+                        style: 'currency',
+                        currency: 'EUR'
+                    }).format(value);
+                },
+
+                clickSelf() {
+                    this.$event.target.click();
+                }
+            }
+        }
+        window.addEventListener('alpine:init', () => Alpine.data('initAutocompleteProduct', initAutocompleteProduct), {once: true})
+    })();
+</script>
+<?php
+/** @var \Hyva\Theme\Model\ViewModelRegistry $viewModels */
+/** @var \Hyva\Theme\ViewModel\HyvaCsp $hyvaCsp */
+$hyvaCsp = $viewModels->require(\Hyva\Theme\ViewModel\HyvaCsp::class);
+$hyvaCsp->registerInlineScript();
+?>

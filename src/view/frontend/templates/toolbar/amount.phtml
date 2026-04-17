@@ -13,7 +13,7 @@ use Magento\Framework\Escaper;
         lg:order-2 col-span-2 gap-x-1"
     id="toolbar-amount"
 >
-    <template x-if="totalPages > 1">
+    <template x-if="hasMultiplePages()">
         <span>
             <?= $escaper->escapeHtml(__('Items')) ?>
             <span class="toolbar-number" x-text="firstItem"></span>
@@ -23,16 +23,16 @@ use Magento\Framework\Escaper;
             <span class="toolbar-number" x-text="$store.meilisearch.state.totalHits"></span>
         </span>
     </template>
-    <template x-if="totalPages <= 1">
+    <template x-if="hasSinglePage()">
         <span>
-            <template x-if="$store.meilisearch.state.totalHits === 1">
+            <template x-if="hasSingleResult()">
                 <span>
                     <span class="toolbar-number">1</span>
                     <?= $escaper->escapeHtml(__('Item')) ?>
                 </span>
             </template>
 
-            <template x-if="$store.meilisearch.state.totalHits !== 1">
+            <template x-if="hasMultipleResults()">
                 <span>
                     <span class="toolbar-number" x-text="$store.meilisearch.state.totalHits"></span>
                     <?= $escaper->escapeHtml(__('Items')) ?>

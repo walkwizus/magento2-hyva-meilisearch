@@ -11,16 +11,11 @@ use Magento\Framework\Escaper;
  */
 $alias = (string)$block->getData('alias');
 ?>
-<div class="flex flex-col gap-2">
+<div class="flex flex-col gap-2" x-data="initAutocompleteCategory">
     <div class="flex justify-end px-2">
         <span
             class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-medium text-gray-700"
-            x-text="
-                (store.autocomplete.results['<?= $escaper->escapeJs($alias) ?>']
-                    ? store.autocomplete.results['<?= $escaper->escapeJs($alias) ?>'].length
-                    : 0
-                ) + ' results'
-            "
+            x-text="resultCountLabel()"
         ></span>
     </div>
 
@@ -32,9 +27,9 @@ $alias = (string)$block->getData('alias');
             <a
                 data-autocomplete-item
                 class="flex flex-col gap-1 p-2 rounded-lg border border-gray-100 hover:border-gray-200 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none cursor-pointer"
-                :href="'/' + (hit.url_key || '')"
-                @click="store.closeAutocomplete()"
-                @keydown.enter.prevent="$event.target.click()"
+                :href="getCategoryUrl()"
+                @click="store.closeAutocomplete"
+                @keydown.enter.prevent="clickSelf"
             >
                 <div class="text-sm font-medium text-gray-900 line-clamp-1" x-text="hit.name"></div>
                 <div class="text-xs text-gray-500 line-clamp-1" x-text="hit.path"></div>
@@ -42,10 +37,51 @@ $alias = (string)$block->getData('alias');
                 <div class="mt-1">
                     <span
                         class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700"
-                        x-text="(hit.product_count || 0) + ' products'"
+                        x-text="productCountLabel()"
                     ></span>
                 </div>
             </a>
         </template>
     </div>
 </div>
+
+<script>
+    (function () {
+        var alias = '<?= $escaper->escapeJs($alias) ?>';
+        var labelResults = '<?= $escaper->escapeJs(__('results')) ?>';
+        var labelProducts = '<?= $escaper->escapeJs(__('products')) ?>';
+
+        function initAutocompleteCategory() {
+            return {
+                get store() {
+                    return Alpine.store('meilisearch');
+                },
+
+                resultCountLabel() {
+                    const results = this.store.autocomplete.results[alias];
+                    const count = results ? results.length : 0;
+                    return count + ' ' + labelResults;
+                },
+
+                getCategoryUrl() {
+                    return '/' + (this.hit.url_key || '');
+                },
+
+                productCountLabel() {
+                    return (this.hit.product_count || 0) + ' ' + labelProducts;
+                },
+
+                clickSelf() {
+                    this.$event.target.click();
+                }
+            }
+        }
+        window.addEventListener('alpine:init', () => Alpine.data('initAutocompleteCategory', initAutocompleteCategory), {once: true})
+    })();
+</script>
+<?php
+/** @var \Hyva\Theme\Model\ViewModelRegistry $viewModels */
+/** @var \Hyva\Theme\ViewModel\HyvaCsp $hyvaCsp */
+$hyvaCsp = $viewModels->require(\Hyva\Theme\ViewModel\HyvaCsp::class);
+$hyvaCsp->registerInlineScript();
+?>

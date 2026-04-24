@@ -12,7 +12,7 @@ use Magento\Framework\Escaper;
     class="field limiter flex items-center order-3 sm:order-2 md:order-3 lg:order-2 col-span-2 justify-end"
     x-data
 >
-    <template x-if="$store.meilisearch.limiterOptions().length > 1">
+    <template x-if="$store.meilisearch.hasMultipleLimiterOptions()">
         <div class="control">
             <label class="text-sm label">
                 <span
@@ -24,7 +24,7 @@ use Magento\Framework\Escaper;
 
                 <select
                     class="form-select limiter-options"
-                    @change="$store.meilisearch.changePerPage($event.target.value)"
+                    @change="$store.meilisearch.changePerPageFromEvent"
                 >
                     <template
                         x-for="limit in $store.meilisearch.limiterOptions()"

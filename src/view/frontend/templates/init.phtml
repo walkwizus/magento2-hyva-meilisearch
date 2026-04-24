@@ -1,7 +1,17 @@
 <?php
-/** @var \Magento\Framework\View\Element\Template $block */
-/** @var \Magento\Framework\Escaper $escaper */
-/** @var \Hyva\WalkwizusMeilisearch\ViewModel\InitJs $viewModel */
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
+use Hyva\WalkwizusMeilisearch\ViewModel\InitJs;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/** @var Template $block */
+/** @var Escaper $escaper */
+/** @var ViewModelRegistry $viewModels */
+/** @var HyvaCsp $hyvaCsp */
+$hyvaCsp = $viewModels->require(HyvaCsp::class);
 $viewModel = $block->getViewModel();
 $scripts = $viewModel->getScripts();
 ?>
@@ -45,3 +55,4 @@ $scripts = $viewModel->getScripts();
         <?php endforeach; ?>
     }, { once: true, passive: true });
 </script>
+<?php $hyvaCsp->registerInlineScript() ?>

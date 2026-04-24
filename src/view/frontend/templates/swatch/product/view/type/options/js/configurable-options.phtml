@@ -1,0 +1,318 @@
+<?php
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\CurrentProduct;
+use Hyva\Theme\ViewModel\HyvaCsp;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/** @var Template $block */
+/** @var Escaper $escaper */
+/** @var HyvaCsp $hyvaCsp */
+/** @var ViewModelRegistry $viewModels */
+/** @var CurrentProduct $currentProduct */
+$currentProduct = $viewModels->require(CurrentProduct::class);
+
+?>
+<script>
+    function initConfigurableOptions(productId, optionConfig) {
+
+        function findPathParam(key) {
+            const baseUrl = (BASE_URL.substring(0, 2) === '//' ? 'http:' : '') + BASE_URL;
+            const baseUrlParts = (new URL(baseUrl)).pathname.replace(/\/$/, '').split('/');
+            const pathParts = window.location.pathname.split('/').slice(baseUrlParts.length + 3);
+            for (let i = 0; i < pathParts.length; i += 2) {
+                if (pathParts[i] === key && pathParts.length > i) {
+                    return pathParts[i + 1];
+                }
+            }
+        }
+
+        return {
+            optionConfig,
+            productId,
+            itemId: (new URLSearchParams(window.location.search)).get('id') || findPathParam('id'),
+            allowedAttributeOptions: [],
+            selectedValues: [],
+            init() {
+                this.findAllowedAttributeOptions();
+                this.$nextTick(() => {
+                    if (typeof this.optionConfig.defaultValues === 'object') {
+                        for (const [attributeId, value] of Object.entries(this.optionConfig.defaultValues)) {
+                            this.changeOption(attributeId, value + '');
+                        }
+                    }
+                });
+            },
+            findSimpleIndex() {
+                this.productIndex = this.calculateSimpleIndexForPartialSelection(this.selectedValues);
+            },
+            calculateSimpleIndexForPartialSelection(selectedValues) {
+                if (selectedValues.length === 0) return 0;
+                let productIndexIds = Object.keys(this.optionConfig.index);
+                Object.keys(this.optionConfig.attributes).forEach((attribute) => {
+                    const productsWithAttributeMatch = selectedValues[attribute]
+                        ? productIndexIds.filter((productIndex) => {
+                            return this.optionConfig.index[productIndex][attribute] === this.selectedValues[attribute]
+                        })
+                        : [];
+
+                    productIndexIds = productsWithAttributeMatch.length ? productsWithAttributeMatch : productIndexIds
+                })
+                return productIndexIds[0];
+            },
+            calculateSimpleIndexForFullSelection(selectedValues) {
+                const productIndexes = this.optionConfig.index;
+                return Object.keys(productIndexes).find(productIndex => {
+                    const productCandidateOptions = productIndexes[productIndex];
+
+                    for (const productOption in productCandidateOptions) {
+                        if (
+                            ! selectedValues[productOption] ||
+                            selectedValues[productOption] !== productCandidateOptions[productOption]
+                        ) {
+                            return false;
+                        }
+                    }
+                    return productIndex;
+                });
+            },
+            productIndex: 0,
+            findAllowedAttributeOptions() {
+                this.allowedAttributeOptions = this.calculateAllowedAttributeOptions(this.selectedValues);
+            },
+            calculateAllowedAttributeOptions(selectedValues) {
+                const allAttributes = this.optionConfig.attributes;
+                const allAttributesSorted = Object.values(allAttributes).sort((a,b) => {
+                    return a.position - b.position
+                });
+
+                const newAllowedAttributeOptions = [];
+
+                allAttributesSorted.forEach(attribute => {
+                    const selectionWithoutAttr = Object.assign({}, this.removeAttrFromSelection(selectedValues, attribute.id));
+                    const availableIndexes = this.calculateAvailableProductIndexes(selectionWithoutAttr);
+                    newAllowedAttributeOptions[attribute.id] = allAttributes[attribute.id].options.filter(option => {
+                        return !!option.products.find(product => {
+                            return availableIndexes.includes(product);
+                        })
+                    });
+                });
+                return newAllowedAttributeOptions;
+            },
+            calculateAvailableProductIndexes(selectedOptions) {
+                if (Object.keys(selectedOptions).length === 0) {
+                    if (Object.values(this.optionConfig.salable || {}).length) {
+                        return [].concat.apply([], [].concat.apply([], Object.values(this.optionConfig.salable).map(Object.values))).filter((x, i, a) => a.indexOf(x) === i)
+                    }
+                    return Object.keys(this.optionConfig.index);
+                }
+
+                const selectedIds = Object.keys(selectedOptions);
+                if (Object.values(this.optionConfig.salable || {}).length) {
+                    const selectedOptionIndexes = selectedIds.map(attrId => {
+                        const optionValue = selectedOptions[attrId];
+                        return this.optionConfig.salable[attrId] && this.optionConfig.salable[attrId][optionValue] || []
+                    })
+                    return selectedOptionIndexes.reduce((acc, optionIndexes) => {
+                        return acc.filter(index => optionIndexes.includes(index));
+                    });
+                } else {
+                    const productIndexes = this.optionConfig.index;
+                    return Object.keys(productIndexes).filter(index => {
+                        for (const attrId of selectedIds) {
+                            if (productIndexes[index][attrId] !== `${selectedOptions[attrId]}`) return false
+                        }
+                        return true
+                    });
+                }
+            },
+            findAttributeByOptionId(optionId) {
+                for (const attributeId in this.optionConfig.attributes) {
+                    const attributeOptions = this.optionConfig.attributes[attributeId].options || [];
+                    if (attributeOptions.find(option => option.id === optionId)) {
+                        return attributeId;
+                    }
+                }
+            },
+            getAllowedAttributeOptions(attributeId) {
+                return this.allowedAttributeOptions[attributeId] || []
+            },
+            getProductIdsForOption(option) {
+                const attributeId = this.findAttributeByOptionId(option.id);
+                const allOptions = this.optionConfig.attributes[attributeId];
+                const opt = (allOptions && allOptions.options || []).find(o => o.id === option.id);
+                return opt && opt.products
+                    ? opt.products
+                    : [];
+            },
+            findProductIdsForPartialSelection(optionSelection) {
+                const candidateProducts = Object.values(optionSelection).reduce((candidates, optionId) => {
+                    const newCandidates = this.getProductIdsForOption({id: optionId});
+                    return candidates === null
+                        ? newCandidates
+                        : candidates.filter(productId => newCandidates.includes(productId));
+                }, null);
+                return candidateProducts || [];
+            },
+            findCheapestProductForPartialSelection(optionSelection) {
+                const candidateProducts = this.findProductIdsForPartialSelection(optionSelection);
+                return candidateProducts.reduce((cheapest, simpleIdx) => {
+                    // in the first iteration we start with simpleIdx as the currently cheapest product
+                    if (! this.optionConfig.optionPrices[cheapest]) return simpleIdx;
+                    const knownCheapestPrice = this.optionConfig.optionPrices[cheapest].finalPrice.amount;
+                    return knownCheapestPrice > this.optionConfig.optionPrices[simpleIdx].finalPrice.amount
+                        ? simpleIdx
+                        : cheapest;
+                }, 0)
+            },
+            findProductIdToUseForOptionPrice(option) {
+                // try to find a product for a complete selection
+                const attributeId = this.findAttributeByOptionId(option.id);
+                const optionSelection = Object.assign({}, this.selectedValues, {[attributeId]: option.id});
+                const matchingSimpleIndex = this.calculateSimpleIndexForFullSelection(optionSelection);
+                // if there is no complete selection, use the cheapest product for the option
+                return matchingSimpleIndex || this.findCheapestProductForPartialSelection(optionSelection);
+            },
+            getAttributeOptionLabel(option) {
+                const optionProduct = this.findProductIdToUseForOptionPrice(option);
+                if ((! optionProduct) || (optionProduct === this.productIndex)) {
+                    return option.label;
+                }
+
+                const currentPrice = this.getOptionPriceAdjustmentBasePrice();
+
+                if (this.optionConfig.optionPrices[optionProduct]) {
+                    const optionPrice = this.optionConfig.optionPrices[optionProduct].finalPrice.amount;
+                    if (optionPrice !== currentPrice){
+                        return option.label + ' ' + hyva.formatPrice(optionPrice - currentPrice, true);
+                    }
+                }
+                return option.label;
+            },
+            getOptionPriceAdjustmentBasePrice() {
+                if (this.optionConfig.optionPrices[this.productIndex]) {
+                    return this.optionConfig.optionPrices[this.productIndex].finalPrice.amount
+                }
+                const cheapestForSelection = this.findCheapestProductForPartialSelection(this.selectedValues);
+                return this.optionConfig.optionPrices[cheapestForSelection]
+                    ? this.optionConfig.optionPrices[cheapestForSelection].finalPrice.amount
+                    : this.optionConfig.prices.finalPrice.amount; // default price if no option selection
+            },
+            clearOptionIfActive(optionId, value) {
+                if (this.selectedValues[optionId] === value) {
+                    this.blurLabel()
+                    this.changeOption(optionId, '')
+                }
+            },
+            removeAttrFromSelection(selectedValues, attributeId) {
+                attributeId = parseInt(attributeId);
+                return selectedValues.reduce((newSelection, val, attr) => {
+                    if (attr !== attributeId) {
+                        newSelection[attr] = val;
+                    }
+                    return newSelection;
+                }, []);
+            },
+            changeOption(attributeId, value) {
+                if (value === '') {
+                    this.selectedValues = this.removeAttrFromSelection(this.selectedValues, attributeId)
+                } else if (value && this.getAllowedAttributeOptions(attributeId).find(option => option.id === value)) {
+                    this.selectedValues[attributeId] = value;
+                }
+                this.findSimpleIndex();
+                this.findAllowedAttributeOptions();
+                this.updatePrices();
+                this.updateGallery();
+                window.dispatchEvent(
+                    new CustomEvent(
+                        'configurable-selection-changed',
+                        {
+                            detail: {
+                                productId: this.productId,
+                                optionId: attributeId,
+                                value: value,
+                                productIndex: this.productIndex,
+                                selectedValues: this.selectedValues,
+                                candidates: this.findProductIdsForPartialSelection(this.selectedValues),
+                            }
+                        }
+                    )
+                );
+            },
+            calculateIsMinimalPrice() {
+                return (
+                    this.selectedValues.filter(value => !!value).length <
+                    Object.keys(this.optionConfig.attributes).length
+                );
+            },
+            updatePrices() {
+                const value = this.productIndex ?
+                    this.optionConfig.optionPrices[this.productIndex] :
+                    this.optionConfig.prices;
+                window.dispatchEvent(
+                    new CustomEvent(
+                        "update-prices-" + this.productId,
+                        {
+                            detail: Object.assign(
+                                value,
+                                { isMinimalPrice: this.calculateIsMinimalPrice() }
+                            )
+                        }
+                    )
+                );
+            },
+            updateGallery () {
+                if (this.productIndex) {
+                    const images = this.optionConfig.images[this.productIndex];
+                    images && window.dispatchEvent(new CustomEvent(
+                        "update-gallery",
+                        { detail: this.sortImagesByPosition(images) }
+                    ));
+                } else {
+                    window.dispatchEvent(new Event("reset-gallery"));
+                }
+            },
+            sortImagesByPosition(images) {
+                return images.sort((x, y) => {
+                    return x.position === y.position ? 0 : (parseInt(x.position) > parseInt(y.position) ? 1 : -1)
+                });
+            },
+            onGetCartData(data) {
+            },
+            preselectCartItems(data) {
+                // pre-select options based on cart data for current (quote) itemId
+                const cart = data && data.cart;
+                if (cart && cart.items) {
+                    const cartItem = cart.items.find((item) => {
+                        return (
+                            item.item_id === this.itemId
+                            && item.product_id === this.productId
+                        )
+                    });
+                    if (cartItem && cartItem.options && cartItem.options.length) {
+                        cartItem.options.map(option => {
+                            this.changeOption(option.option_id, option.option_value);
+                        })
+                    }
+                }
+            },
+            preselectQuerystringItems() {
+                // pre-select option like ?size=167
+                const urlQueryParams = new URLSearchParams(window.location.search.replace('?',''));
+                this.preselectItemsBasedOnLocation(attribute => urlQueryParams.get(attribute.code));
+            },
+            preselectLocationHashItems() {
+                // pre-select option like #144=167
+                const urlHashParams = new URLSearchParams(window.location.hash.replace('#',''));
+                this.preselectItemsBasedOnLocation(attribute => urlHashParams.get(attribute.id));
+            },
+            preselectItemsBasedOnLocation(getLocationValue) {
+                Object.values(this.optionConfig.attributes).map(attribute => {
+                    this.changeOption(attribute.id, getLocationValue(attribute))
+                });
+            }
+        }
+    }
+</script>
+<?php $hyvaCsp->registerInlineScript() ?>

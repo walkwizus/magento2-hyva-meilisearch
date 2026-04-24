@@ -3,16 +3,18 @@
 declare(strict_types=1);
 
 use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
 use Hyva\Theme\ViewModel\LucideIcons;
+use Hyva\WalkwizusMeilisearch\ViewModel\Autocomplete;
 use Magento\Framework\Escaper;
 use Magento\Framework\View\Element\Template;
-use Hyva\WalkwizusMeilisearch\ViewModel\Autocomplete;
 
 /** @var Escaper $escaper */
 /** @var Template $block */
 /** @var ViewModelRegistry $viewModels */
+/** @var HyvaCsp $hyvaCsp */
 
-/** @var LucideIcons $lucideIcons */
+$hyvaCsp = $viewModels->require(HyvaCsp::class);
 $lucideIcons = $viewModels->require(LucideIcons::class);
 $autocomplete = $viewModels->require(Autocomplete::class);
 $renderers = $autocomplete->getRenderers();
@@ -20,13 +22,13 @@ $renderers = $autocomplete->getRenderers();
 
 <div
     class="container py-2 mx-auto text-black"
-    x-data="initMiniSearch()"
+    x-data="initMiniSearch"
 >
     <search title="<?= $escaper->escapeHtmlAttr(__('Store')) ?>" role="search">
         <form
             id="search_mini_form"
             class="form minisearch flex"
-            @submit.prevent="search()"
+            @submit.prevent="search"
             x-ref="form"
         >
             <label class="sr-only" for="search">
@@ -39,28 +41,12 @@ $renderers = $autocomplete->getRenderers();
                 autocomplete="off"
                 class="form-input w-full rounded-e-none"
                 placeholder="<?= $escaper->escapeHtmlAttr(__('Search products, categories...')) ?>"
-                x-model="store.autocomplete.term"
-                @search-open.window.debounce.10="$el.focus(); $el.select()"
-                @input.debounce.5ms="
-                    if ($event.target.value.length >= minSearchLength) {
-                        store.openAutocomplete();
-                        store.performAutocomplete($event.target.value);
-                        $event.target.setCustomValidity('');
-                    } else {
-                        store.autocomplete.results = {};
-                        store.autocomplete.open = false;
-                    }
-                "
-                @focus="
-                    if ($event.target.value.length >= minSearchLength) {
-                        store.openAutocomplete();
-                        store.performAutocomplete($event.target.value);
-                    }
-                "
-                @keydown.escape.stop.prevent="store.closeAutocomplete()"
-                @keydown.arrow-down.prevent="
-                    focusElement($root.querySelector('[data-autocomplete-item]'))
-                "
+                :value="store.autocomplete.term"
+                @search-open.window.debounce.10="onSearchOpen"
+                @input.debounce.5ms="onSearchInput"
+                @focus="onSearchFocus"
+                @keydown.escape.stop.prevent="store.closeAutocomplete"
+                @keydown.arrow-down.prevent="focusFirstAutocompleteItem"
             >
             <button
                 type="submit"
@@ -72,10 +58,7 @@ $renderers = $autocomplete->getRenderers();
             </button>
         </form>
         <template
-            x-if="
-                store.autocomplete.open
-                && store.hasAutocompleteResults()
-            "
+            x-if="store.autocomplete.open && store.hasAutocompleteResults()"
         >
             <div
                 class="absolute z-30 left-0 right-0 mt-2 bg-white border border-gray-200 rounded-2xl shadow-2xl overflow-hidden"
@@ -96,14 +79,11 @@ $renderers = $autocomplete->getRenderers();
                     <?php endforeach; ?>
                 </div>
                 <div class="flex items-center justify-between px-3 py-2 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
-                    <span x-text="store.autocomplete.term
-                        ? '<?= $escaper->escapeJs(__('Results for')) ?> ' + '“' + store.autocomplete.term + '”'
-                        : '<?= $escaper->escapeJs(__('Start typing to search')) ?>'
-                    "></span>
+                    <span x-text="searchResultsLabel()"></span>
                     <button
                         type="button"
                         class="inline-flex items-center gap-1 text-gray-500 hover:text-gray-700"
-                        @click="store.closeAutocomplete()"
+                        @click="store.closeAutocomplete"
                     >
                         <?= $lucideIcons->xHtml('', 12, 12, ['aria-hidden' => 'true']); ?>
                         <span><?= $escaper->escapeHtml(__('Close')) ?></span>
@@ -120,19 +100,21 @@ $renderers = $autocomplete->getRenderers();
     function initMiniSearch() {
         return {
             minSearchLength: 1,
+            labelResultsFor: '<?= $escaper->escapeJs(__('Results for')) ?>',
+            labelStartTyping: '<?= $escaper->escapeJs(__('Start typing to search')) ?>',
+            labelMinLength: '<?= $escaper->escapeJs(__('Minimum Search query length is %1', '{{min}}')) ?>',
 
             get store() {
                 return Alpine.store('meilisearch');
             },
 
-            search(term) {
-                const query = term || this.store.autocomplete.term || '';
+            search() {
+                const query = this.store.autocomplete.term || '';
                 if (!query || query.length < this.minSearchLength) {
                     const input = this.$refs.searchInput;
                     if (input) {
                         input.setCustomValidity(
-                            '<?= $escaper->escapeJs(__('Minimum Search query length is %1', '{{min}}')) ?>'
-                                .replace('{{min}}', this.minSearchLength)
+                            this.labelMinLength.replace('{{min}}', this.minSearchLength)
                         );
                         input.reportValidity();
                     }
@@ -140,6 +122,42 @@ $renderers = $autocomplete->getRenderers();
                 }
 
                 window.location = this.store.getSearchUrl() + '?q=' + encodeURIComponent(query);
+            },
+
+            onSearchOpen() {
+                this.$el.focus();
+                this.$el.select();
+            },
+
+            onSearchInput() {
+                const value = this.$event.target.value;
+                this.store.autocomplete.term = value;
+                if (value.length >= this.minSearchLength) {
+                    this.store.openAutocomplete();
+                    this.store.performAutocomplete(value);
+                    this.$event.target.setCustomValidity('');
+                } else {
+                    this.store.autocomplete.results = {};
+                    this.store.autocomplete.open = false;
+                }
+            },
+
+            onSearchFocus() {
+                const value = this.$event.target.value;
+                if (value.length >= this.minSearchLength) {
+                    this.store.openAutocomplete();
+                    this.store.performAutocomplete(value);
+                }
+            },
+
+            focusFirstAutocompleteItem() {
+                this.focusElement(this.$root.querySelector('[data-autocomplete-item]'));
+            },
+
+            searchResultsLabel() {
+                return this.store.autocomplete.term
+                    ? this.labelResultsFor + ' "' + this.store.autocomplete.term + '"'
+                    : this.labelStartTyping;
             },
 
             clear() {
@@ -162,4 +180,6 @@ $renderers = $autocomplete->getRenderers();
             }
         }
     }
+    window.addEventListener('alpine:init', () => Alpine.data('initMiniSearch', initMiniSearch), {once: true})
 </script>
+<?php $hyvaCsp->registerInlineScript() ?>

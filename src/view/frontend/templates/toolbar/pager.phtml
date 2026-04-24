@@ -35,14 +35,14 @@ $pagerIconSize = 20;
     <a
         href="<?= $escaper->escapeUrl($paginationViewModel->getPageUrl($currentCategoryUrl, max(1, $currentPage - 1))) ?>"
         class="pages-item-previous <?= $escaper->escapeHtmlAttr($pagerItemClass) ?>"
-        :class="!canGoPrev ? 'text-gray-400 border-gray-200 cursor-not-allowed pointer-events-none' : 'text-gray-700'"
-        @click.prevent="prevPage()"
+        :class="prevBtnClass()"
+        @click.prevent="prevPage"
         aria-label="<?= $escaper->escapeHtmlAttr(__('Previous Page')) ?>"
     >
         <?= $lucideIcons->arrowLeftHtml('', $pagerIconSize, $pagerIconSize, ['aria-hidden' => 'true']); ?>
     </a>
 
-    <ol class="inline-flex gap-1 items-center pages-items" x-show="!$store.meilisearch.isHydrated">
+    <ol class="inline-flex gap-1 items-center pages-items" x-show="$store.meilisearch.isNotHydrated()">
         <?php if ($paginationViewModel->canShowFirst($framePages)): ?>
             <li class="item">
                 <a href="<?= $escaper->escapeUrl($paginationViewModel->getPageUrl($currentCategoryUrl, 1)) ?>" class="<?= $escaper->escapeHtmlAttr($pagerItemClass) ?>">1</a>
@@ -83,8 +83,8 @@ $pagerIconSize = 20;
                 <a
                     :href="'?page=' + page"
                     class="<?= $escaper->escapeHtmlAttr($pagerItemClass) ?>"
-                    :class="page === currentPage ? 'bg-gray-100 border-primary font-bold' : ''"
-                    :aria-current="page === currentPage ? 'page' : null"
+                    :class="pageItemClass()"
+                    :aria-current="pageAriaCurrentAttr()"
                     @click.prevent="goToPage(page)"
                     x-text="page"
                 ></a>
@@ -95,8 +95,8 @@ $pagerIconSize = 20;
     <a
         href="<?= $escaper->escapeUrl($paginationViewModel->getPageUrl($currentCategoryUrl, min($lastPageNum, $currentPage + 1))) ?>"
         class="pages-item-next <?= $escaper->escapeHtmlAttr($pagerItemClass) ?>"
-        :class="!canGoNext ? 'text-gray-400 border-gray-200 cursor-not-allowed pointer-events-none' : 'text-gray-700'"
-        @click.prevent="nextPage()"
+        :class="nextBtnClass()"
+        @click.prevent="nextPage"
         aria-label="<?= $escaper->escapeHtmlAttr(__('Next Page')) ?>"
     >
         <?= $lucideIcons->arrowRightHtml('', $pagerIconSize, $pagerIconSize, ['aria-hidden' => 'true']); ?>

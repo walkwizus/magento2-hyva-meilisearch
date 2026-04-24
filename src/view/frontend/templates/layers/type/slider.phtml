@@ -1,19 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+use Magento\Framework\Escaper;
+
+/**
+ * @var Escaper $escaper
+ */
+?>
 <template x-if="facet.type === 'price'">
-    <div class="w-full max-w-md mx-auto p-6" x-data="msPriceSlider(facet)">
+    <div class="w-full max-w-md mx-auto p-6"
+         x-data="msPriceSlider"
+         x-bind="eventListeners"
+         data-label-products="<?= $escaper->escapeHtmlAttr(__('products')) ?>"
+         data-label-product="<?= $escaper->escapeHtmlAttr(__('product')) ?>"
+    >
 
         <div class="relative h-2 mb-8">
             <div class="absolute inset-0 bg-gray-200 rounded-full"></div>
             <div class="absolute h-full bg-blue-500 rounded-full"
-                 :style="`left: ${((min - minLimit) / (maxLimit - minLimit)) * 100}%;
-                          right: ${100 - ((max - minLimit) / (maxLimit - minLimit)) * 100}%`"
+                 :style="trackStyle()"
             ></div>
 
-            <input type="range" x-model.number="min" :min="minLimit" :max="maxLimit"
-                   @input="min = Math.min(min, max)" @change="apply()"
+            <input type="range"
+                   :value="min"
+                   :min="minLimit"
+                   :max="maxLimit"
+                   @input="setMin"
+                   @change="apply"
                    class="range-input">
 
-            <input type="range" x-model.number="max" :min="minLimit" :max="maxLimit"
-                   @input="max = Math.max(max, min)" @change="apply()"
+            <input type="range"
+                   :value="max"
+                   :min="minLimit"
+                   :max="maxLimit"
+                   @input="setMax"
+                   @change="apply"
                    class="range-input">
         </div>
 
@@ -23,9 +45,9 @@
                 <span class="mx-3 text-gray-300 font-light text-lg">|</span>
                 <span class="text-sm font-bold text-gray-900" x-text="format(max)"></span>
             </div>
-            <template x-if="totalCount > 0">
+            <template x-if="hasTotalCount()">
                 <div class="text-[11px] uppercase tracking-wider text-gray-400 font-semibold"
-                     x-text="`${totalCount} ${totalCount > 1 ? '<?= __('products') ?>' : '<?= __('product') ?>'}`">
+                     x-text="totalCountText()">
                 </div>
             </template>
         </div>

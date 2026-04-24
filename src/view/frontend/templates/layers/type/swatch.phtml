@@ -19,7 +19,7 @@ $configurableViewModel = $viewModels->require(ConfigurableViewModel::class);
     <div
         class="swatch-attribute swatch-layered"
         :class="facet.code"
-        x-data="initMeilisearchLayeredSwatch()"
+        x-data="initMeilisearchLayeredSwatch"
     >
         <div class="swatch-attribute-options clearfix">
             <template
@@ -30,29 +30,13 @@ $configurableViewModel = $viewModels->require(ConfigurableViewModel::class);
                     href="#"
                     rel="nofollow"
                     @click.prevent="$store.meilisearch.toggleFacet(facet.code, option.value)"
-                    :aria-label="`<?= $escaper->escapeJs(__('Filter')) ?> ${facet.label} ${option.label}`"
+                    :aria-label="'<?= $escaper->escapeJs(__('Filter')) ?> ' + facet.label + ' ' + option.label"
                     class="swatch-option-link-layered swatch-option cursor-pointer bg-white shadow-sm relative select-none border-gray-300"
-                    :class="{
-                                                'w-6 h-6': getSwatchType(option.swatchType) !== 'text',
-                                                'border-gray-100 ring ring-primary/50':
-                                                    $store.meilisearch.state.selectedFacets[facet.code]
-                                                    && $store.meilisearch.state.selectedFacets[facet.code].includes(option.value),
-                                                'border-gray-300':
-                                                    !$store.meilisearch.state.selectedFacets[facet.code]
-                                                    || !$store.meilisearch.state.selectedFacets[facet.code].includes(option.value),
-                                                'opacity-50 cursor-not-allowed': option.count === 0
-                                            }"
+                    :class="swatchOptionClass()"
                     :style="getSwatchBackgroundStyle(option.swatchType, option.swatchValue, '')"
                     <?php if ($configurableViewModel->getShowSwatchTooltip()): ?>
-                        @mouseenter.self="activeTooltipItem = {
-                                                    attribute: facet.code,
-                                                    type: '' + option.swatchType,
-                                                    id: '' + option.value,
-                                                    label: '' + option.label,
-                                                    thumb: '',
-                                                    value: '' + option.swatchValue
-                                                }; tooltipPositionElement = $event.target;"
-                        @mouseleave.self="activeTooltipItem = false"
+                        @mouseenter.self="setTooltip"
+                        @mouseleave.self="clearTooltip"
                     <?php endif; ?>
                 >
                     <template x-if="getSwatchType(option.swatchType) === 'text'">
@@ -61,15 +45,21 @@ $configurableViewModel = $viewModels->require(ConfigurableViewModel::class);
                 </a>
             </template>
         </div>
-        <template x-if="facet.showMore && facet.options.length > facet.showMoreLimit && !$store.meilisearch.state.selectedFacets[facet.code]">
+        <template x-if="facet.hasShowMoreSwatch">
             <button
                 type="button"
                 class="mt-2 text-sm text-primary hover:underline font-medium"
                 @click="$store.meilisearch.toggleShowMore(facet.code)"
-                x-text="facet.isShowMoreExpanded
-                    ? '<?= $escaper->escapeHtml(__('Show less')) ?>'
-                    : '<?= $escaper->escapeHtml(__('Show more (%1 more)')) ?>'.replace('%1', facet.options.length - facet.showMoreLimit)"
             >
+                <template x-if="facet.isShowMoreExpanded">
+                    <span><?= $escaper->escapeHtml(__('Show less')) ?></span>
+                </template>
+                <template x-if="facet.isNotShowMoreExpanded">
+                    <span>
+                        <?= $escaper->escapeHtml(__('Show more')) ?>
+                        (<span x-text="facet.showMoreCount"></span> <?= $escaper->escapeHtml(__('more')) ?>)
+                    </span>
+                </template>
             </button>
         </template>
 

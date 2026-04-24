@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 use Hyva\Theme\Model\ViewModelRegistry;
 use Hyva\Theme\ViewModel\HeroiconsOutline;
+use Hyva\Theme\ViewModel\HyvaCsp;
 use Magento\Framework\Escaper;
 use Walkwizus\MeilisearchFrontend\ViewModel\Ssr;
 
 /** @var Escaper $escaper */
 /** @var ViewModelRegistry $viewModels */
 /** @var HeroiconsOutline $heroicons */
+/** @var HyvaCsp $hyvaCsp */
 /** @var Ssr $ssr */
 
+$hyvaCsp = $viewModels->require(HyvaCsp::class);
 $heroicons = $viewModels->require(HeroiconsOutline::class);
 $ssr = $viewModels->require(Ssr::class);
 $config = $ssr->getConfig();
@@ -21,7 +24,7 @@ $isDescending = $ssr->isDescending();
 ?>
 <div
     class="toolbar-sorter sorter flex items-center order-1 col-span-3 sm:col-span-6 md:col-span-3 lg:col-span-6 justify-end"
-    x-data
+    x-data="initMeilisearchSorter"
 >
     <label class="inline-block mr-3">
         <select
@@ -29,7 +32,7 @@ $isDescending = $ssr->isDescending();
             name="sorter"
             class="form-select sorter-options"
             aria-label="<?= $escaper->escapeHtmlAttr(__('Sort By')) ?>"
-            @change="$store.meilisearch.setSortBy($event.target.value)"
+            @change="onSortChange"
         >
             <?php foreach ($availableSortBy as $code => $label): ?>
                 <option
@@ -46,21 +49,33 @@ $isDescending = $ssr->isDescending();
         title="<?= $escaper->escapeHtmlAttr(__('Set Ascending Direction')) ?>"
         type="button"
         class="action sorter-action sort-desc"
-        :disabled="!$store.meilisearch.state.sortBy"
-        :class="!$store.meilisearch.state.sortBy ? 'opacity-60 cursor-not-allowed' : ''"
-        @click.prevent="$store.meilisearch.toggleSortDirection()"
+        :disabled="$store.meilisearch.hasNoSortBy()"
+        :class="$store.meilisearch.sortBtnDisabledClass()"
+        @click.prevent="$store.meilisearch.toggleSortDirection"
     >
         <?= $heroicons->sortAscendingHtml('', 24, 24, ['aria-hidden' => 'true']); ?>
     </button>
     <button
-        x-show="!$store.meilisearch.state.isDescending"
+        x-show="$store.meilisearch.isAscending()"
         type="button"
         title="<?= $escaper->escapeHtmlAttr(__('Set Descending Direction')) ?>"
         class="action sorter-action sort-asc"
-        :disabled="!$store.meilisearch.state.sortBy"
-        :class="!$store.meilisearch.state.sortBy ? 'opacity-60 cursor-not-allowed' : ''"
-        @click.prevent="$store.meilisearch.toggleSortDirection()"
+        :disabled="$store.meilisearch.hasNoSortBy()"
+        :class="$store.meilisearch.sortBtnDisabledClass()"
+        @click.prevent="$store.meilisearch.toggleSortDirection"
     >
         <?= $heroicons->sortDescendingHtml('', 24, 24, ['aria-hidden' => 'true']); ?>
     </button>
 </div>
+
+<script>
+    function initMeilisearchSorter() {
+        return {
+            onSortChange() {
+                this.$store.meilisearch.setSortBy(this.$event.target.value);
+            }
+        }
+    }
+    window.addEventListener('alpine:init', () => Alpine.data('initMeilisearchSorter', initMeilisearchSorter), {once: true})
+</script>
+<?php $hyvaCsp->registerInlineScript() ?>

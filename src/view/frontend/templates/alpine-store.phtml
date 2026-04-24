@@ -1,3 +1,16 @@
+<?php
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
+use Magento\Framework\View\Element\Template;
+
+/** @var Template $block */
+/** @var ViewModelRegistry $viewModels */
+/** @var HyvaCsp $hyvaCsp */
+$hyvaCsp = $viewModels->require(HyvaCsp::class);
+?>
 <script>
     (() => {
         let meilisearchClient = null;
@@ -101,6 +114,7 @@
                     }
 
                     this.isHydrated = true;
+                    document.dispatchEvent(new CustomEvent('meilisearch:initialized'));
                 },
 
                 getHybridParams(query) {
@@ -122,6 +136,56 @@
                 },
 
                 async performSearch() {
+                    if (this.meilisearchConfig['catalog_list_mode']) {
+                        return this.performClientSideSearch();
+                    }
+                    return this.performServerSideSearch();
+                },
+
+                async performServerSideSearch() {
+                    this.state.isLoading = true;
+
+                    const params = new URLSearchParams();
+                    params.set('q', this.state.searchQuery || '');
+                    if (window.meilisearchFrontendConfig?.currentCategoryId) {
+                        params.set('category_ids', window.meilisearchFrontendConfig.currentCategoryId);
+                    }
+                    params.set('page', String(this.state.page));
+                    params.set('product_list_limit', String(this.limiterState.perPage));
+                    params.set('product_list_mode', this.viewModeState.mode || this.meilisearchConfig.defaultViewMode || 'grid');
+                    params.set('product_list_dir', this.state.isDescending ? 'desc' : 'asc');
+
+                    if (this.state.sortBy) {
+                        params.set('product_list_order', this.state.sortBy);
+                    }
+
+                    Object.entries(this.state.selectedFacets).forEach(([code, values]) => {
+                        if (values && values.length) {
+                            params.set(code, values.join(','));
+                        }
+                    });
+
+                    try {
+                        const res = await fetch(BASE_URL + 'meilisearch/ajax/products?' + params.toString());
+
+                        if (!res.ok) {
+                            throw new Error('HTTP ' + res.status);
+                        }
+
+                        const json = await res.json();
+
+                        this.updateResults(json);
+                        document.dispatchEvent(new CustomEvent('meilisearch:html-updated', {
+                            detail: { html: json.html || '' }
+                        }));
+                    } catch (e) {
+                        console.error('[Meilisearch] performSearch error', e);
+                    } finally {
+                        this.state.isLoading = false;
+                    }
+                },
+
+                async performClientSideSearch() {
                     this.state.isLoading = true;
 
                     const searchQuery = this.state.searchQuery;
@@ -264,12 +328,28 @@
                             ? sortedOptions.slice(0, facet.showMoreLimit)
                             : sortedOptions;
 
+                        const hasShowMore = facet.showMore
+                            && sortedOptions.length > facet.showMoreLimit
+                            && !searchQuery;
+                        const hasShowMoreSwatch = facet.showMore
+                            && sortedOptions.length > facet.showMoreLimit
+                            && !(this.state.selectedFacets[facet.code] || []).length;
+
                         return {
                             ...facet,
                             options: sortedOptions,
                             visibleOptions: visibleOptions,
                             isShowMoreExpanded: isShowMoreExpanded,
-                            currentSearchQuery: searchQuery
+                            isNotShowMoreExpanded: !isShowMoreExpanded,
+                            currentSearchQuery: searchQuery,
+                            isCheckboxType: !facet.isSwatch && (
+                                facet.type === 'multiselect'
+                                || facet.type === 'select'
+                                || facet.type === 'boolean'
+                            ),
+                            hasShowMore: hasShowMore,
+                            showMoreCount: sortedOptions.length - facet.showMoreLimit,
+                            hasShowMoreSwatch: hasShowMoreSwatch
                         };
                     });
                 },
@@ -306,6 +386,11 @@
                         selected[code] = current;
                     } else {
                         delete selected[code];
+                        window.dispatchEvent(new CustomEvent('meilisearch:remove-filter', {
+                            detail: {
+                                filter: code
+                            }
+                        }));
                     }
 
                     this.state.selectedFacets = selected;
@@ -384,6 +469,7 @@
                     this.syncUrl();
                     this.performSearch();
                     window.scrollTo({ top: 0, behavior: 'smooth' });
+                    window.dispatchEvent(new CustomEvent('meilisearch:filters-cleared'));
                 },
 
                 limiterOptions() {
@@ -590,8 +676,92 @@
                 getProductUrl(urlKey) {
                     const baseUrl = this.meilisearchConfig.baseUrl;
                     return baseUrl + urlKey;
+                },
+
+                // CSP helper methods - replace inline expressions in templates
+                isNotHydrated() {
+                    return !this.isHydrated;
+                },
+
+                isEmptyResults() {
+                    return this.state.totalHits === 0;
+                },
+
+                loadingClass() {
+                    return this.state.isLoading
+                        ? 'opacity-50 pointer-events-none transition-opacity duration-200'
+                        : '';
+                },
+
+                productWrapperClass() {
+                    return this.viewModeState.mode === 'list'
+                        ? 'mode-list products-list'
+                        : 'mode-grid products-grid';
+                },
+
+                productItemClass() {
+                    return this.viewModeState.mode === 'list' ? 'md:flex-row' : '';
+                },
+
+                productPhotoClass() {
+                    return this.viewModeState.mode === 'list' ? 'md:w-2/6 md:mb-0 md:shrink-0' : '';
+                },
+
+                productInfoClass() {
+                    return this.viewModeState.mode === 'list' ? 'md:pl-5 md:w-4/6' : '';
+                },
+
+                productTitleClass() {
+                    return this.viewModeState.mode === 'list' ? 'md:text-left' : '';
+                },
+
+                productGridUlClass() {
+                    return this.viewModeState.mode === 'grid'
+                        ? 'grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
+                        : 'grid gap-4 grid-cols-1';
+                },
+
+                getListImageWidth() {
+                    return this.getListImageConfig().width;
+                },
+
+                getListImageHeight() {
+                    return this.getListImageConfig().height;
+                },
+
+                isAscending() {
+                    return !this.state.isDescending;
+                },
+
+                hasNoSortBy() {
+                    return !this.state.sortBy;
+                },
+
+                sortBtnDisabledClass() {
+                    return !this.state.sortBy ? 'opacity-60 cursor-not-allowed' : '';
+                },
+
+                hasMultipleLimiterOptions() {
+                    return this.limiterOptions().length > 1;
+                },
+
+                changePerPageFromEvent() {
+                    this.changePerPage(this.$el.value);
+                },
+
+                setSortByFromEvent() {
+                    this.setSortBy(this.$el.value);
+                },
+
+                setViewModeFromEl() {
+                    this.setViewMode(this.$el.dataset.value);
+                },
+
+                isViewModeActive() {
+                    return this.viewModeState.mode === this.$el.dataset.value;
                 }
             });
         });
     })();
 </script>
+<?php $hyvaCsp->registerInlineScript() ?>

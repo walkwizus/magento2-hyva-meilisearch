@@ -4,7 +4,7 @@
     <type name="Hyva\CompatModuleFallback\Model\CompatModuleRegistry">
         <arguments>
             <argument name="compatModules" xsi:type="array">
-                <item name="walkwizus_meilisearchfrontend_map" xsi:type="array">
+                <item name="Walkwizus_MeilisearchFrontend" xsi:type="array">
                     <item name="original_module" xsi:type="string">Walkwizus_MeilisearchFrontend</item>
                     <item name="compat_module" xsi:type="string">Hyva_WalkwizusMeilisearch</item>
                 </item>

@@ -2,14 +2,48 @@
 
 declare(strict_types=1);
 
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
 use Magento\Framework\Escaper;
 
 /**
  * @var Escaper $escaper
+ * @var ViewModelRegistry $viewModels
+ * @var HyvaCsp $hyvaCsp
  */
+$hyvaCsp = $viewModels->require(HyvaCsp::class);
 ?>
 
 <script>
+    function initActiveFilters() {
+        return {
+            open: true,
+            toggle() {
+                this.open = !this.open;
+            }
+        }
+    }
+    window.addEventListener('alpine:init', () => Alpine.data('initActiveFilters', initActiveFilters), {once: true})
+
+    function initFilterOption() {
+        return {
+            open: false,
+
+            toggle() {
+                this.open = !this.open;
+            },
+
+            filterTitleId() {
+                return 'filter-option-' + this.facet.code + '-title';
+            },
+
+            filterContentId() {
+                return 'filter-option-' + this.facet.code + '-content';
+            }
+        }
+    }
+    window.addEventListener('alpine:init', () => Alpine.data('initFilterOption', initFilterOption), {once: true})
+
     function initMeilisearchLayeredSwatch() {
         return {
             activeTooltipItem: false,
@@ -64,8 +98,8 @@ use Magento\Framework\Escaper;
             getTooltipPosition() {
                 return this.tooltipPositionElement
                     ? (
-                        `top: ${this.tooltipPositionElement.offsetTop}px;` +
-                        `left: ${this.tooltipPositionElement.offsetLeft}px;`
+                        'top: ' + this.tooltipPositionElement.offsetTop + 'px;' +
+                        'left: ' + this.tooltipPositionElement.offsetLeft + 'px;'
                     )
                     : '';
             },
@@ -76,9 +110,40 @@ use Magento\Framework\Escaper;
 
             isVisualSwatch() {
                 return this.getSwatchType(this.activeTooltipItem.type) !== 'text';
+            },
+
+            swatchOptionClass() {
+                const isVisual = this.getSwatchType(this.option.swatchType) !== 'text';
+                const selectedFacets = this.$store.meilisearch.state.selectedFacets;
+                const selected = selectedFacets[this.facet.code]
+                    && selectedFacets[this.facet.code].includes(this.option.value);
+
+                return {
+                    'w-6 h-6': isVisual,
+                    'border-gray-100 ring ring-primary/50': selected,
+                    'border-gray-300': !selected,
+                    'opacity-50 cursor-not-allowed': this.option.count === 0
+                };
+            },
+
+            setTooltip() {
+                this.activeTooltipItem = {
+                    attribute: this.option.swatchType ? this.facet.code : null,
+                    type: '' + this.option.swatchType,
+                    id: '' + this.option.value,
+                    label: '' + this.option.label,
+                    thumb: '',
+                    value: '' + this.option.swatchValue
+                };
+                this.tooltipPositionElement = this.$event.target;
+            },
+
+            clearTooltip() {
+                this.activeTooltipItem = false;
             }
         }
     }
+    window.addEventListener('alpine:init', () => Alpine.data('initMeilisearchLayeredSwatch', initMeilisearchLayeredSwatch), {once: true})
 
     function meilisearchLayeredNavigation() {
         return {
@@ -103,6 +168,10 @@ use Magento\Framework\Escaper;
                 return result;
             },
 
+            toggleBlockOpen() {
+                this.blockOpen = !this.blockOpen;
+            },
+
             getFacetLabel(code) {
                 const facets = this.$store.meilisearch.getAvailableFacets
                     ? this.$store.meilisearch.getAvailableFacets()
@@ -123,7 +192,7 @@ use Magento\Framework\Escaper;
                         );
                     };
 
-                    return `${format(min)} - ${format(max)}`;
+                    return format(min) + ' - ' + format(max);
                 }
 
                 const facets = this.$store.meilisearch.getAvailableFacets ? this.$store.meilisearch.getAvailableFacets() : [];
@@ -153,4 +222,6 @@ use Magento\Framework\Escaper;
             }
         }
     }
+    window.addEventListener('alpine:init', () => Alpine.data('meilisearchLayeredNavigation', meilisearchLayeredNavigation), {once: true})
 </script>
+<?php $hyvaCsp->registerInlineScript() ?>

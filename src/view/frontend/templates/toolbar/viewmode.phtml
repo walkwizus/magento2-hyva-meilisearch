@@ -2,11 +2,16 @@
 
 declare(strict_types=1);
 
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\HyvaCsp;
 use Magento\Catalog\Block\Product\ProductList\Toolbar;
 use Magento\Framework\Escaper;
 
 /** @var Toolbar $block */
 /** @var Escaper $escaper */
+/** @var ViewModelRegistry $viewModels */
+/** @var HyvaCsp $hyvaCsp */
+$hyvaCsp = $viewModels->require(HyvaCsp::class);
 ?>
 
 <?php if ($block->isEnabledViewSwitcher()): ?>
@@ -16,7 +21,7 @@ use Magento\Framework\Escaper;
             class="modes invisible md:visible flex justify-center gap-1 mr-2 items-center px-2 py-2 rounded-md border border-gray-300 bg-white text-sm leading-5
                 w-20 order-1 col-span-1 sm:col-span-2 md:col-span-1 lg:col-span-2"
             aria-label="<?= $escaper->escapeHtmlAttr(__('Products view mode')) ?>"
-            x-data
+            x-data="initMeilisearchViewmode"
         >
             <style>
                 .modes-mode.mode-grid {
@@ -36,11 +41,9 @@ use Magento\Framework\Escaper;
                     data-role="mode-switcher"
                     data-value="<?= $escaper->escapeHtmlAttr($mode) ?>"
                     aria-label="<?= $escaper->escapeHtmlAttr(__('Products view mode - %1', $label)) ?>"
-                    @click="$store.meilisearch.setViewMode('<?= $escaper->escapeJs($mode) ?>')"
-                    :class="$store.meilisearch.viewModeState.mode === '<?= $escaper->escapeJs($mode) ?>'
-                        ? 'modes-mode w-6 h-6 mode-<?= $escaper->escapeHtmlAttr($mode) ?> active'
-                        : 'modes-mode w-6 h-6 mode-<?= $escaper->escapeHtmlAttr($mode) ?> opacity-50 hover:opacity-100'"
-                    :disabled="$store.meilisearch.viewModeState.mode === '<?= $escaper->escapeJs($mode) ?>'"
+                    @click="setViewMode"
+                    :class="viewModeButtonClass()"
+                    :disabled="isActiveMode()"
                 ></button>
             <?php endforeach; ?>
         </nav>
@@ -48,3 +51,26 @@ use Magento\Framework\Escaper;
         <div class="modes w-20 order-1 col-span-1 sm:col-span-2 md:col-span-1 lg:col-span-2"></div>
     <?php endif; ?>
 <?php endif; ?>
+
+<script>
+    function initMeilisearchViewmode() {
+        return {
+            setViewMode() {
+                this.$store.meilisearch.setViewMode(this.$el.dataset.value);
+            },
+
+            isActiveMode() {
+                return this.$store.meilisearch.viewModeState.mode === this.$el.dataset.value;
+            },
+
+            viewModeButtonClass() {
+                const mode = this.$el.dataset.value;
+                const active = this.$store.meilisearch.viewModeState.mode === mode;
+                const base = 'modes-mode w-6 h-6 mode-' + mode;
+                return active ? base + ' active' : base + ' opacity-50 hover:opacity-100';
+            }
+        }
+    }
+    window.addEventListener('alpine:init', () => Alpine.data('initMeilisearchViewmode', initMeilisearchViewmode), {once: true})
+</script>
+<?php $hyvaCsp->registerInlineScript() ?>

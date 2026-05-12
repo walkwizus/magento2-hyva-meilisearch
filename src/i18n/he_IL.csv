@@ -1,0 +1,34 @@
+cleStore,חנות
+Search,חיפוש
+"Search products, categories...","חפש מוצרים, קטגוריות..."
+name,שם
+"Results for","תוצאות עבור"
+"Start typing to search","התחל להקליד לחיפוש"
+Close,סגור
+"Minimum Search query length is %1","אורך שאילתת החיפוש המינימלי הוא %1"
+"Product filters","סינון מוצרים"
+"Shop By","סנן לפי"
+"Active filtering","סינון פעיל"
+"Clear All","נקה הכל"
+"Remove active %1 filter: %2","הסר סינון %1 פעיל: %2"
+"Show less","הצג פחות"
+"Show more (%1 more)","הצג עוד (%1 נוספים)"
+products,מוצרים
+results,תוצאות
+product,מוצר
+Filter,סינון
+"We can't find products matching the selection.","לא נמצאו מוצרים התואמים את הבחירה."
+"Product list","רשימת מוצרים"
+Items,פריטים
+of,מתוך
+Item,פריט
+"Show items per page","הצג פריטים בעמוד"
+Show,הצג
+pagination,עמודים
+"Previous Page","עמוד קודם"
+"Next Page","עמוד הבא"
+"Sort By","מיין לפי"
+"Set Ascending Direction","מיין בסדר עולה"
+"Set Descending Direction","מיין בסדר יורד"
+"Products view mode","מצב תצוגת מוצרים"
+"Products view mode - %1","מצב תצוגת מוצרים - %1"

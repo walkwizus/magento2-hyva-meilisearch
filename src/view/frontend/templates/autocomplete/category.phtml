@@ -19,7 +19,7 @@ $alias = (string)$block->getData('alias');
                 (store.autocomplete.results['<?= $escaper->escapeJs($alias) ?>']
                     ? store.autocomplete.results['<?= $escaper->escapeJs($alias) ?>'].length
                     : 0
-                ) + ' results'
+                ) + ' <?= $escaper->escapeJs(__('results')) ?>'
             "
         ></span>
     </div>
@@ -42,7 +42,7 @@ $alias = (string)$block->getData('alias');
                 <div class="mt-1">
                     <span
                         class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700"
-                        x-text="(hit.product_count || 0) + ' products'"
+                        x-text="(hit.product_count || 0) + ' <?= $escaper->escapeJs(__('products')) ?>'"
                     ></span>
                 </div>
             </a>

@@ -1,0 +1,34 @@
+Store,Store
+Search,Search
+"Search products, categories...","Search products, categories..."
+name,name
+"Results for","Results for"
+"Start typing to search","Start typing to search"
+Close,Close
+"Minimum Search query length is %1","Minimum Search query length is %1"
+"Product filters","Product filters"
+"Shop By","Shop By"
+"Active filtering","Active filtering"
+"Clear All","Clear All"
+"Remove active %1 filter: %2","Remove active %1 filter: %2"
+"Show less","Show less"
+"Show more (%1 more)","Show more (%1 more)"
+products,products
+results,results
+product,product
+Filter,Filter
+"We can't find products matching the selection.","We can't find products matching the selection."
+"Product list","Product list"
+Items,Items
+of,of
+Item,Item
+"Show items per page","Show items per page"
+Show,Show
+pagination,pagination
+"Previous Page","Previous Page"
+"Next Page","Next Page"
+"Sort By","Sort By"
+"Set Ascending Direction","Set Ascending Direction"
+"Set Descending Direction","Set Descending Direction"
+"Products view mode","Products view mode"
+"Products view mode - %1","Products view mode - %1"

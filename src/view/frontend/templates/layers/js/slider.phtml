@@ -45,8 +45,8 @@
                 const selected = this.store.state.selectedFacets?.[this.facet.code]?.[0];
                 const [urlMin, urlMax] = selected ? selected.split('_').map(Number) : [];
 
-                this.min = urlMin ?? this.minLimit;
-                this.max = urlMax ?? this.maxLimit;
+                this.min = urlMin && urlMin > this.minLimit ? urlMin : this.minLimit;
+                this.max = urlMax && urlMax < this.maxLimit ? urlMax : this.maxLimit;
             },
 
             apply() {
@@ -62,6 +62,23 @@
                 state.page = 1;
                 this.store.syncUrl();
                 this.store.performSearch();
+            },
+
+            eventListeners: {
+                ['@meilisearch:filters-cleared.window']() {
+                    const state = this.store.state;
+                    this.min = this.minLimit;
+                    this.max = this.maxLimit;
+                    delete state.selectedFacets[this.facet.code];
+                },
+                ['@meilisearch:remove-filter.window'](event) {
+                    if (event.detail.filter === this.facet.code) {
+                        const state = this.store.state;
+                        this.min = this.minLimit;
+                        this.max = this.maxLimit;
+                        delete state.selectedFacets[this.facet.code];
+                    }
+                }
             }
         }
     }

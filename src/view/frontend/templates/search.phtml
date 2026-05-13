@@ -24,139 +24,223 @@ $viewIsGrid = $viewMode === 'grid';
 $imageCfg = $config['images']['category_page_' . $viewMode] ?? ['type' => 'small_image', 'width' => 240, 'height' => 300];
 $imageAttr = $imageCfg['type'] ?? 'small_image';
 $imagePath = $hit[$imageAttr] ?? ($hit['small_image'] ?? ($hit['image'] ?? ($hit['thumbnail'] ?? '')));
+$clientSideRendering = $config['catalog_list_mode'];
 ?>
 
-<?php if ($totalHits === 0): ?>
-    <div id="meilisearch-frontend-search">
-        <div class="message info empty">
-            <div><?= $escaper->escapeHtml(__("We can't find products matching the selection.")) ?></div>
-        </div>
-    </div>
-<?php else : ?>
-    <div id="meilisearch-frontend-search">
-        <section
-            class="py-8"
-            id="product-list"
-            aria-label="<?= $escaper->escapeHtmlAttr(__('Product list')) ?>"
-            tabindex="-1"
-            x-data
-            x-init="$store.meilisearch.init()"
+<?php if (!$clientSideRendering): ?>
+    <?php if ($totalHits === 0): ?>
+        <div id="meilisearch-frontend-search"
+             x-data
+             x-init="$store.meilisearch.init()"
         >
-            <?= $block->getChildHtml('meilisearch.toolbar') ?>
             <div
-                class="products wrapper mode-<?= /* @noEscape */$viewMode ?> products-<?= /* @noEscape */$viewMode ?>"
-                :class="$store.meilisearch.viewModeState.mode === 'list'
-                ? 'mode-list products-list'
-                : 'mode-grid products-grid'"
+                class="message info empty"
+                x-show="$store.meilisearch.state.totalHits === 0"
             >
-                <?php
-                $gridClass = 'mx-auto pt-4 pb-12 grid gap-4 grid-cols-1 ' . ($viewIsGrid ? 'sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3' : '');
-                ?>
-                <ul
-                    role="list"
-                    class="<?= $gridClass ?>"
-                    x-show="!$store.meilisearch.isHydrated"
+                <div><?= $escaper->escapeHtml(__("We can't find products matching the selection.")) ?></div>
+            </div>
+        </div>
+    <?php else: ?>
+        <div id="meilisearch-frontend-search">
+            <section
+                class="py-8"
+                id="product-list"
+                aria-label="<?= $escaper->escapeHtmlAttr(__('Product list')) ?>"
+                tabindex="-1"
+                x-data
+                x-init="$store.meilisearch.init()"
+            >
+                <?= $block->getChildHtml('meilisearch.toolbar') ?>
+
+                <div
+                    id="meilisearch-product-list-container"
+                    :class="$store.meilisearch.state.isLoading ? 'opacity-50 pointer-events-none transition-opacity duration-200' : ''"
                 >
-                    <?php foreach ($searchResult['hits'] as $hit): ?>
-                        <li class="flex flex-col">
-                            <div class="item product product-item card card-interactive grow flex flex-col w-full <?= $viewIsGrid ? '' : 'md:flex-row' ?>">
-                                <a href="<?= $escaper->escapeUrl($ssr->getProductUrl($hit['url_key'])) ?>"
-                                   title="<?= $escaper->escapeHtmlAttr($hit['name']) ?>"
-                                   class="product photo product-item-photo block mx-auto mb-3 <?= $viewIsGrid ? '' : 'md:w-2/6 md:mb-0 md:shrink-0' ?>"
-                                   tabindex="-1"
-                                >
-                                    <img
-                                        width="<?= (int)($imageCfg['width'] ?? 240) ?>"
-                                        height="<?= (int)($imageCfg['height'] ?? 300) ?>"
-                                        class="product-image-photo"
-                                        loading="lazy"
-                                        src="<?= $escaper->escapeUrl($ssr->getProductImage($imagePath)) ?>"
-                                        alt=""
-                                    />
-                                </a>
-                                <div class="product-info flex flex-col grow <?= $viewIsGrid ? '' : 'md:pl-5 md:w-4/6' ?>">
-                                    <div class="mt-2 mb-1 items-center justify-center font-semibold text-lg text-center <?= $viewIsGrid ? '' : 'md:text-left' ?>">
-                                        <a
-                                            class="product-item-link"
-                                            href="<?= $escaper->escapeUrl($ssr->getProductUrl($hit['url_key'])) ?>"
-                                        >
-                                            <?= $escaper->escapeHtmlAttr($hit['name']) ?>
-                                        </a>
-                                    </div>
-                                    <?= $ssr->getProductPrice($hit[$config['priceAttributeCode']]) ?>
-                                </div>
-                            </div>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
-                <ul
-                    role="list"
-                    class="mx-auto pt-4 pb-12"
+                    <?php
+                        $productCollection = $ssr->getProductCollection($searchResult);
+                        $productListBlock = $block->getChildBlock('meilisearch.search.product.list')->setCollection($productCollection);
+                    ?>
+                    <?= $productListBlock->toHtml(); ?>
+
+                </div>
+
+                <div
                     x-cloak
-                    x-show="$store.meilisearch.isHydrated"
-                    :class="$store.meilisearch.viewModeState.mode === 'grid'
-                    ? 'grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
-                    : 'grid gap-4 grid-cols-1'"
+                    x-show="$store.meilisearch.state.totalHits === 0"
+                    class="message info empty"
                 >
-                    <template x-for="hit in $store.meilisearch.state.hits" :key="hit.id">
-                        <li class="flex flex-col">
-                            <div
-                                class="item product product-item card card-interactive grow flex flex-col w-full"
-                                :class="$store.meilisearch.viewModeState.mode === 'list' ? 'md:flex-row' : ''"
-                            >
-                                <a
-                                    :href="$store.meilisearch.getProductUrl(hit.url_key)"
-                                    :title="hit.name"
-                                    class="product photo product-item-photo block mx-auto mb-3"
-                                    :class="$store.meilisearch.viewModeState.mode === 'list'
-                                    ? 'md:w-2/6 md:mb-0 md:shrink-0'
-                                    : ''"
-                                    tabindex="-1"
-                                >
-                                    <img
-                                        class="product-image-photo"
-                                        loading="lazy"
-                                        :width="$store.meilisearch.getListImageConfig().width"
-                                        :height="$store.meilisearch.getListImageConfig().height"
-                                        :src="$store.meilisearch.getHitImageUrl(hit)"
-                                        :alt="hit.name"
-                                    />
-                                </a>
+                    <div><?= $escaper->escapeHtml(__("We can't find products matching the selection.")) ?></div>
+                </div>
+
+                <?= $block->getChildBlock('meilisearch.toolbar')->setIsBottom(true)->toHtml() ?>
+            </section>
+        </div>
+    <?php endif; ?>
+<?php else: ?>
+    <?php if ($totalHits === 0): ?>
+        <div id="meilisearch-frontend-search">
+            <div class="message info empty">
+                <div><?= $escaper->escapeHtml(__("We can't find products matching the selection.")) ?></div>
+            </div>
+        </div>
+    <?php else : ?>
+        <div id="meilisearch-frontend-search">
+            <section
+                class="py-8"
+                id="product-list"
+                aria-label="<?= $escaper->escapeHtmlAttr(__('Product list')) ?>"
+                tabindex="-1"
+                x-data
+                x-init="$store.meilisearch.init()"
+            >
+                <?= $block->getChildHtml('meilisearch.toolbar') ?>
+                <div
+                    class="products wrapper mode-<?= /* @noEscape */$viewMode ?> products-<?= /* @noEscape */$viewMode ?>"
+                    :class="$store.meilisearch.viewModeState.mode === 'list'
+                    ? 'mode-list products-list'
+                    : 'mode-grid products-grid'"
+                >
+                    <?php
+                    $gridClass = 'mx-auto pt-4 pb-12 grid gap-4 grid-cols-1 ' . ($viewIsGrid ? 'sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3' : '');
+                    ?>
+                    <ul
+                        role="list"
+                        class="<?= $gridClass ?>"
+                        x-show="!$store.meilisearch.isHydrated"
+                    >
+                        <?php foreach ($searchResult['hits'] as $hit): ?>
+                            <li class="flex flex-col">
+                                <div class="item product product-item card card-interactive grow flex flex-col w-full <?= $viewIsGrid ? '' : 'md:flex-row' ?>">
+                                    <a href="<?= $escaper->escapeUrl($ssr->getProductUrl($hit['url_key'])) ?>"
+                                       title="<?= $escaper->escapeHtmlAttr($hit['name']) ?>"
+                                       class="product photo product-item-photo block mx-auto mb-3 <?= $viewIsGrid ? '' : 'md:w-2/6 md:mb-0 md:shrink-0' ?>"
+                                       tabindex="-1"
+                                    >
+                                        <img
+                                            width="<?= (int)($imageCfg['width'] ?? 240) ?>"
+                                            height="<?= (int)($imageCfg['height'] ?? 300) ?>"
+                                            class="product-image-photo"
+                                            loading="lazy"
+                                            src="<?= $escaper->escapeUrl($ssr->getProductImage($imagePath)) ?>"
+                                            alt=""
+                                        />
+                                    </a>
+                                    <div class="product-info flex flex-col grow <?= $viewIsGrid ? '' : 'md:pl-5 md:w-4/6' ?>">
+                                        <div class="mt-2 mb-1 items-center justify-center font-semibold text-lg text-center <?= $viewIsGrid ? '' : 'md:text-left' ?>">
+                                            <a
+                                                class="product-item-link"
+                                                href="<?= $escaper->escapeUrl($ssr->getProductUrl($hit['url_key'])) ?>"
+                                            >
+                                                <?= $escaper->escapeHtmlAttr($hit['name']) ?>
+                                            </a>
+                                        </div>
+                                        <?= $ssr->getProductPrice($hit[$config['priceAttributeCode']]) ?>
+                                    </div>
+                                </div>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                    <ul
+                        role="list"
+                        class="mx-auto pt-4 pb-12"
+                        x-cloak
+                        x-show="$store.meilisearch.isHydrated"
+                        :class="$store.meilisearch.viewModeState.mode === 'grid'
+                        ? 'grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'
+                        : 'grid gap-4 grid-cols-1'"
+                    >
+                        <template x-for="hit in $store.meilisearch.state.hits" :key="hit.id">
+                            <li class="flex flex-col">
                                 <div
-                                    class="product-info flex flex-col grow"
-                                    :class="$store.meilisearch.viewModeState.mode === 'list'
-                                    ? 'md:pl-5 md:w-4/6'
-                                    : ''"
+                                    class="item product product-item card card-interactive grow flex flex-col w-full"
+                                    :class="$store.meilisearch.viewModeState.mode === 'list' ? 'md:flex-row' : ''"
                                 >
-                                    <div
-                                        class="mt-2 mb-1 items-center justify-center font-semibold text-lg text-center"
+                                    <a
+                                        :href="$store.meilisearch.getProductUrl(hit.url_key)"
+                                        :title="hit.name"
+                                        class="product photo product-item-photo block mx-auto mb-3"
                                         :class="$store.meilisearch.viewModeState.mode === 'list'
-                                        ? 'md:text-left'
+                                        ? 'md:w-2/6 md:mb-0 md:shrink-0'
+                                        : ''"
+                                        tabindex="-1"
+                                    >
+                                        <img
+                                            class="product-image-photo"
+                                            loading="lazy"
+                                            :width="$store.meilisearch.getListImageConfig().width"
+                                            :height="$store.meilisearch.getListImageConfig().height"
+                                            :src="$store.meilisearch.getHitImageUrl(hit)"
+                                            :alt="hit.name"
+                                        />
+                                    </a>
+                                    <div
+                                        class="product-info flex flex-col grow"
+                                        :class="$store.meilisearch.viewModeState.mode === 'list'
+                                        ? 'md:pl-5 md:w-4/6'
                                         : ''"
                                     >
-                                        <a
-                                            class="product-item-link"
-                                            :href="$store.meilisearch.getProductUrl(hit.url_key)"
-                                            x-text="hit.name"
-                                        ></a>
+                                        <div
+                                            class="mt-2 mb-1 items-center justify-center font-semibold text-lg text-center"
+                                            :class="$store.meilisearch.viewModeState.mode === 'list'
+                                            ? 'md:text-left'
+                                            : ''"
+                                        >
+                                            <a
+                                                class="product-item-link"
+                                                :href="$store.meilisearch.getProductUrl(hit.url_key)"
+                                                x-text="hit.name"
+                                            ></a>
+                                        </div>
+                                        <template x-for="fragment in $store.meilisearch.meilisearchFragments" :key="fragment">
+                                            <div :data-fragment="fragment" :data-sku="hit.sku"></div>
+                                        </template>
                                     </div>
-                                    <template x-for="fragment in $store.meilisearch.meilisearchFragments" :key="fragment">
-                                        <div :data-fragment="fragment" :data-sku="hit.sku"></div>
-                                    </template>
                                 </div>
-                            </div>
-                        </li>
-                    </template>
-                </ul>
-            </div>
-            <?= $block->getChildBlock('meilisearch.toolbar')->setIsBottom(true)->toHtml() ?>
-        </section>
-    </div>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+                <?= $block->getChildBlock('meilisearch.toolbar')->setIsBottom(true)->toHtml() ?>
+            </section>
+        </div>
+    <?php endif; ?>
 <?php endif; ?>
 
 <script>
     window.meilisearchInitialState = <?= /* @noEscape */ json_encode($searchResult, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
 </script>
+
+<?php if (!$clientSideRendering): ?>
+<script>
+    (function () {
+
+        var productListContainer = document.getElementById('meilisearch-product-list-container');
+
+        document.addEventListener('meilisearch:html-updated', function (event) {
+            if (!productListContainer) {
+                return;
+            }
+
+            var html = event.detail.html || '';
+
+            if (window.Alpine && typeof Alpine.destroyTree === 'function') {
+                productListContainer.innerHTML = '';
+                Alpine.destroyTree(productListContainer);
+            }
+
+            productListContainer.innerHTML = html;
+            hyva.activateScripts(productListContainer);
+
+        });
+
+        <?php if (isset($config['current_category'])): ?>
+        document.addEventListener('meilisearch:initialized', () => {
+            window.meilisearchFrontendConfig.currentCategoryId = <?= (int)$config['current_category']; ?>;
+        });
+        <?php endif; ?>
+    })();
+</script>
+<?php else: ?>
 <script>
     (function () {
         function collectFragmentHosts() {
@@ -261,3 +345,4 @@ $imagePath = $hit[$imageAttr] ?? ($hit['small_image'] ?? ($hit['image'] ?? ($hit
         });
     })();
 </script>
+<?php endif; ?>

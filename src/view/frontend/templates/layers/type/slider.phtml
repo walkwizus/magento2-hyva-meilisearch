@@ -1,5 +1,5 @@
 <template x-if="facet.type === 'price'">
-    <div class="w-full max-w-md mx-auto p-6" x-data="msPriceSlider(facet)">
+    <div class="w-full max-w-md mx-auto p-6" x-data="msPriceSlider(facet)" x-bind="eventListeners">
 
         <div class="relative h-2 mb-8">
             <div class="absolute inset-0 bg-gray-200 rounded-full"></div>

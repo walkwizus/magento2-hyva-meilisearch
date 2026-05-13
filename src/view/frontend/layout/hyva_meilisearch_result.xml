@@ -1,12 +1,18 @@
 <?xml version="1.0"?>
 
 <page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <update handle="catalog_list_item" />
     <head>
         <remove src="https://cdn.jsdelivr.net/npm/nouislider@15.7.0/dist/nouislider.min.css"/>
     </head>
     <body>
         <referenceBlock name="meilisearch.frontend.search">
-            <block class="Magento\Catalog\Block\Product\ProductList\Toolbar" name="meilisearch.toolbar" template="Hyva_WalkwizusMeilisearch::toolbar.phtml"/>
+            <block class="Magento\Catalog\Block\Product\ProductList\Toolbar"
+                   name="meilisearch.toolbar"
+                   template="Hyva_WalkwizusMeilisearch::toolbar.phtml"/>
+            <block class="Walkwizus\MeilisearchFrontend\Block\Search\ProductList"
+                   name="meilisearch.search.product.list"
+                   template="Hyva_WalkwizusMeilisearch::product/list.phtml"/>
         </referenceBlock>
         <referenceBlock name="meilisearch.frontend.layers">
             <block name="meilisearch.frontend.layers.active" template="Hyva_WalkwizusMeilisearch::layers/active.phtml"/>

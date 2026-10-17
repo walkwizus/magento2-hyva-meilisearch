@@ -7,6 +7,10 @@
     <body>
         <referenceBlock name="meilisearch.frontend.search">
             <block class="Magento\Catalog\Block\Product\ProductList\Toolbar" name="meilisearch.toolbar" template="Hyva_WalkwizusMeilisearch::toolbar.phtml"/>
+            <block name="meilisearch.frontend.search.js.hit-render" template="Hyva_WalkwizusMeilisearch::product/js/hit-render.phtml"/>
+            <block name="meilisearch.frontend.search.product.price.alpine" template="Hyva_WalkwizusMeilisearch::product/price/alpine.phtml">
+                <block name="meilisearch.frontend.search.product.price.alpine.amount" as="amount" template="Hyva_WalkwizusMeilisearch::product/price/alpine/amount.phtml"/>
+            </block>
         </referenceBlock>
         <referenceBlock name="meilisearch.frontend.layers">
             <block name="meilisearch.frontend.layers.active" template="Hyva_WalkwizusMeilisearch::layers/active.phtml"/>

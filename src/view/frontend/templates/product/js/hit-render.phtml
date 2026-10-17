@@ -1,0 +1,109 @@
+<?php
+
+declare(strict_types=1);
+
+use Magento\Framework\View\Element\Template;
+
+/**
+ * @var Template $block
+ */
+?>
+<script>
+    function meilisearchHitRender(hit) {
+        const store = () => Alpine.store('meilisearch');
+        const render = () => store().meilisearchProductRender;
+        const priceAttributeCode = () => store().meilisearchConfig.priceAttributeCode;
+        let priceViewCache;
+
+        return {
+            selection: {},
+            swatchAttributes: null,
+
+            attributes() {
+                if (!render() || !store().meilisearchConfig.showSwatchesInProductList) {
+                    return [];
+                }
+
+                if (this.swatchAttributes === null) {
+                    this.swatchAttributes = render().getSwatchAttributes(hit, store().meilisearchConfig.swatchOptions);
+                }
+
+                return this.swatchAttributes;
+            },
+
+            imageUrl() {
+                const imageType = store().getListImageConfig().type || 'small_image';
+                const path = render() ? render().getSelectedImage(hit, this.selection, imageType) : '';
+
+                return path ? store().getProductImage(path) : store().getHitImageUrl(hit);
+            },
+
+            priceView() {
+                if (!render()) {
+                    return null;
+                }
+
+                const key = JSON.stringify(this.selection);
+
+                if (priceViewCache === undefined || priceViewCache.key !== key) {
+                    const view = render().getPriceView(
+                        hit,
+                        priceAttributeCode(),
+                        render().getSelectedPrice(hit, this.selection, priceAttributeCode(), store().meilisearchConfig.currencyCode),
+                        store().meilisearchConfig,
+                        (amount) => hyva.formatPrice(amount)
+                    );
+
+                    priceViewCache = {
+                        key: key,
+                        value: view ? Object.assign(view, { productUrl: store().getProductUrl(hit.url_key) }) : null
+                    };
+                }
+
+                return priceViewCache.value;
+            },
+
+            fallbackPrice() {
+                const value = hit[priceAttributeCode()];
+
+                const config = store().meilisearchConfig;
+
+                return value !== undefined && value !== null && config.currencyCode === config.baseCurrencyCode
+                    ? hyva.formatPrice(value)
+                    : '';
+            },
+
+            isSelected(attribute, option) {
+                return Number(this.selection[attribute.attribute_id]) === Number(option.value);
+            },
+
+            isAvailable(attribute, option) {
+                return render().isOptionAvailable(hit, this.selection, attribute.attribute_id, option.value);
+            },
+
+            select(attribute, option) {
+                if (!this.isAvailable(attribute, option)) {
+                    return;
+                }
+
+                this.selection = render().toggleOption(this.selection, attribute.attribute_id, option.value);
+            },
+
+            selectedLabel(attribute) {
+                return render().getSelectedOptionLabel(attribute, this.selection);
+            },
+
+            swatchKind(option) {
+                return render().getSwatchKind(option);
+            },
+
+            swatchStyle(option) {
+                return render().getSwatchStyle(option, store().meilisearchConfig.mediaUrl);
+            },
+
+            swatchText(option) {
+                return render().getSwatchText(option);
+            }
+        };
+    }
+</script>

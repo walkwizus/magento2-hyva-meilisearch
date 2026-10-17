@@ -1,0 +1,40 @@
+<?php
+
+declare(strict_types=1);
+
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * @var Escaper $escaper
+ * @var Template $block
+ */
+$expression = (string)$block->getData('expression');
+$label = (string)$block->getData('label');
+?>
+<template x-if="<?= $escaper->escapeHtmlAttr($expression) ?>">
+    <span x-data="{ get amount() { return <?= $escaper->escapeHtmlAttr($expression) ?>; } }"
+          x-id="amount.id ? [amount.id] : []"
+          class="price-container <?= $escaper->escapeHtmlAttr((string)$block->getData('container_class')) ?>"
+    >
+        <?php if ($label !== ''): ?>
+            <span class="price-label"><?= $escaper->escapeHtml($label) ?></span>
+        <?php endif; ?>
+        <span :id="amount.id ? $id(amount.id) : null"
+              :data-label="amount.exclTax ? '<?= $escaper->escapeJs(__('Incl. Tax')) ?>' : null"
+              :data-price-amount="amount.value"
+              :data-price-type="amount.type"
+              class="price-wrapper"
+              :class="{ 'price-including-tax': amount.exclTax }"
+              <?php if (!$block->getData('include_container')): ?>x-text="amount.price"<?php endif; ?>
+        ><?php if ($block->getData('include_container')): ?><span class="price" x-text="amount.price"></span><?php endif; ?></span>
+        <template x-if="amount.exclTax">
+            <span :id="amount.exclTax.id"
+                  data-label="<?= $escaper->escapeHtmlAttr(__('Excl. Tax')) ?>"
+                  :data-price-amount="amount.exclTax.value"
+                  :data-price-type="amount.exclTax.type"
+                  class="price-wrapper price-excluding-tax"
+            ><span class="price" x-text="amount.exclTax.price"></span></span>
+        </template>
+    </span>
+</template>

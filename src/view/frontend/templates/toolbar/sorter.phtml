@@ -46,8 +46,8 @@ $isDescending = $ssr->isDescending();
         title="<?= $escaper->escapeHtmlAttr(__('Set Ascending Direction')) ?>"
         type="button"
         class="action sorter-action sort-desc"
-        :disabled="!$store.meilisearch.state.sortBy"
-        :class="!$store.meilisearch.state.sortBy ? 'opacity-60 cursor-not-allowed' : ''"
+        :disabled="$store.meilisearch.isSortDirectionDisabled()"
+        :class="$store.meilisearch.isSortDirectionDisabled() ? 'opacity-60 cursor-not-allowed' : ''"
         @click.prevent="$store.meilisearch.toggleSortDirection()"
     >
         <?= $heroicons->sortAscendingHtml('', 24, 24, ['aria-hidden' => 'true']); ?>
@@ -57,8 +57,8 @@ $isDescending = $ssr->isDescending();
         type="button"
         title="<?= $escaper->escapeHtmlAttr(__('Set Descending Direction')) ?>"
         class="action sorter-action sort-asc"
-        :disabled="!$store.meilisearch.state.sortBy"
-        :class="!$store.meilisearch.state.sortBy ? 'opacity-60 cursor-not-allowed' : ''"
+        :disabled="$store.meilisearch.isSortDirectionDisabled()"
+        :class="$store.meilisearch.isSortDirectionDisabled() ? 'opacity-60 cursor-not-allowed' : ''"
         @click.prevent="$store.meilisearch.toggleSortDirection()"
     >
         <?= $heroicons->sortDescendingHtml('', 24, 24, ['aria-hidden' => 'true']); ?>

@@ -258,37 +258,19 @@
                             }
                         }
 
-                        const sortedOptions = this.sortFacetOptions([...options], facet.sortValuesBy);
                         const isShowMoreExpanded = this.state.expandedFacets.includes(facet.code);
                         const visibleOptions = (searchQuery === '' && facet.showMore && !isShowMoreExpanded && !selectedValues.length)
-                            ? sortedOptions.slice(0, facet.showMoreLimit)
-                            : sortedOptions;
+                            ? options.slice(0, facet.showMoreLimit)
+                            : options;
 
                         return {
                             ...facet,
-                            options: sortedOptions,
+                            options: options,
                             visibleOptions: visibleOptions,
                             isShowMoreExpanded: isShowMoreExpanded,
                             currentSearchQuery: searchQuery
                         };
                     });
-                },
-
-                sortFacetOptions(options, sortType) {
-                    if (sortType === 'alpha') {
-                        return options.sort((a, b) => {
-                            const labelA = String(a.label || a.value || '');
-                            const labelB = String(b.label || b.value || '');
-
-                            return labelA.localeCompare(labelB, undefined, { numeric: true, sensitivity: 'base' });
-                        });
-                    }
-
-                    if (sortType === 'count') {
-                        return options.sort((a, b) => b.count - a.count);
-                    }
-
-                    return options;
                 },
 
                 toggleFacet(code, value) {

@@ -24,7 +24,9 @@ $viewIsGrid = $viewMode === 'grid';
 $imageCfg = $config['images']['category_page_' . $viewMode] ?? ['type' => 'small_image', 'width' => 240, 'height' => 300];
 $imageAttr = $imageCfg['type'] ?? 'small_image';
 $imagePath = $hit[$imageAttr] ?? ($hit['small_image'] ?? ($hit['image'] ?? ($hit['thumbnail'] ?? '')));
+$priceBlock = $block->getChildBlock('meilisearch.frontend.search.product.price');
 ?>
+<?= $block->getChildHtml('meilisearch.frontend.search.js.hit-render') ?>
 
 <?php if ($totalHits === 0): ?>
     <div id="meilisearch-frontend-search">
@@ -83,7 +85,13 @@ $imagePath = $hit[$imageAttr] ?? ($hit['small_image'] ?? ($hit['image'] ?? ($hit
                                             <?= $escaper->escapeHtmlAttr($hit['name']) ?>
                                         </a>
                                     </div>
-                                    <?= $ssr->getProductPrice($hit[$config['priceAttributeCode']]) ?>
+                                    <?php $priceHtml = $priceBlock ? trim((string)$priceBlock
+                                        ->setData('hit', $hit)
+                                        ->setData('product_url', $ssr->getProductUrl($hit['url_key']))
+                                        ->toHtml()) : ''; ?>
+                                    <?= /* @noEscape */ $priceHtml !== ''
+                                        ? $priceHtml
+                                        : $ssr->getProductPrice($hit[$config['priceAttributeCode']] ?? 0) ?>
                                 </div>
                             </div>
                         </li>
@@ -99,7 +107,7 @@ $imagePath = $hit[$imageAttr] ?? ($hit['small_image'] ?? ($hit['image'] ?? ($hit
                     : 'grid gap-4 grid-cols-1'"
                 >
                     <template x-for="hit in $store.meilisearch.state.hits" :key="hit.id">
-                        <li class="flex flex-col">
+                        <li class="flex flex-col" x-data="meilisearchHitRender(hit)">
                             <div
                                 class="item product product-item card card-interactive grow flex flex-col w-full"
                                 :class="$store.meilisearch.viewModeState.mode === 'list' ? 'md:flex-row' : ''"
@@ -118,7 +126,7 @@ $imagePath = $hit[$imageAttr] ?? ($hit['small_image'] ?? ($hit['image'] ?? ($hit
                                         loading="lazy"
                                         :width="$store.meilisearch.getListImageConfig().width"
                                         :height="$store.meilisearch.getListImageConfig().height"
-                                        :src="$store.meilisearch.getHitImageUrl(hit)"
+                                        :src="imageUrl()"
                                         :alt="hit.name"
                                     />
                                 </a>
@@ -140,6 +148,61 @@ $imagePath = $hit[$imageAttr] ?? ($hit['small_image'] ?? ($hit['image'] ?? ($hit
                                             x-text="hit.name"
                                         ></a>
                                     </div>
+                                    <?= $block->getChildHtml('meilisearch.frontend.search.product.price.alpine') ?>
+                                    <template x-if="!priceView() && fallbackPrice()">
+                                        <div class="price-box price-final_price text-center"
+                                             :class="$store.meilisearch.viewModeState.mode === 'list' ? 'md:text-left' : ''"
+                                        >
+                                            <span class="price font-semibold" x-text="fallbackPrice()"></span>
+                                        </div>
+                                    </template>
+                                    <template x-if="attributes().length">
+                                        <div class="mt-2 space-y-1">
+                                            <template x-for="attribute in attributes()" :key="attribute.attribute_id">
+                                                <div class="swatch-attribute"
+                                                     :class="attribute.attribute_code"
+                                                     :data-attribute-code="attribute.attribute_code"
+                                                     :data-option-selected="selectedLabel(attribute)"
+                                                >
+                                                    <div class="swatch-attribute-options flex flex-wrap justify-center gap-2 py-1"
+                                                         :class="$store.meilisearch.viewModeState.mode === 'list' ? 'md:justify-start' : ''"
+                                                         role="group"
+                                                         :aria-label="attribute.label"
+                                                    >
+                                                        <template x-for="option in attribute.options" :key="option.value">
+                                                            <button
+                                                                type="button"
+                                                                class="swatch-option relative shadow-sm select-none bg-white border product-option-value-label"
+                                                                :class="{
+                                                                    'border-gray-100 ring ring-primary/50': isSelected(attribute, option),
+                                                                    'border-gray-300': !isSelected(attribute, option),
+                                                                    'w-6 h-6': swatchKind(option) !== 'text',
+                                                                    'px-2 py-0.5 text-sm whitespace-nowrap': swatchKind(option) === 'text',
+                                                                    'cursor-pointer': isAvailable(attribute, option),
+                                                                    'opacity-50 cursor-not-allowed': !isAvailable(attribute, option)
+                                                                }"
+                                                                :style="swatchStyle(option)"
+                                                                :title="option.label"
+                                                                :aria-label="option.label"
+                                                                :aria-pressed="isSelected(attribute, option) ? 'true' : 'false'"
+                                                                :disabled="!isAvailable(attribute, option)"
+                                                                :data-option-id="option.value"
+                                                                @click="select(attribute, option)"
+                                                            >
+                                                                <span x-show="swatchKind(option) === 'text'" x-text="swatchText(option)"></span>
+                                                                <svg x-show="!isAvailable(attribute, option)"
+                                                                     class="absolute inset-0 w-full h-full text-gray-500 bg-white/25 pointer-events-none"
+                                                                     aria-hidden="true"
+                                                                >
+                                                                    <line x1="0" y1="100%" x2="100%" y2="0" class="stroke-current stroke-1"></line>
+                                                                </svg>
+                                                            </button>
+                                                        </template>
+                                                    </div>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </template>
                                     <template x-for="fragment in $store.meilisearch.meilisearchFragments" :key="fragment">
                                         <div :data-fragment="fragment" :data-sku="hit.sku"></div>
                                     </template>

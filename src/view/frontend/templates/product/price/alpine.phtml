@@ -1,0 +1,90 @@
+<?php
+
+declare(strict_types=1);
+
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * @var Escaper $escaper
+ * @var Template $block
+ */
+$amountBlock = $block->getChildBlock('amount');
+
+if (!$amountBlock) {
+    return;
+}
+
+$renderAmount = static fn (
+    string $expression,
+    string $label = '',
+    string $containerClass = 'price-final_price tax weee',
+    bool $includeContainer = true
+): string => $amountBlock->addData([
+    'expression' => $expression,
+    'label' => $label,
+    'container_class' => $containerClass,
+    'include_container' => $includeContainer,
+])->toHtml();
+?>
+<template x-if="priceView()">
+    <div class="pt-1">
+        <div class="price-box price-final_price"
+             data-role="priceBox"
+             :data-product-id="priceView().productId"
+             :data-price-box="'product-id-' + priceView().productId"
+        >
+            <template x-if="priceView().type === 'grouped'">
+                <div class="price-box">
+                    <p class="minimal-price">
+                        <span class="price-label"><?= $escaper->escapeHtml(__('Starting at')) ?></span>
+                        <?= /* @noEscape */ $renderAmount('priceView().minPrice', '', 'tax weee') ?>
+                    </p>
+                </div>
+            </template>
+            <template x-if="priceView().type === 'bundle' && priceView().bundleView === 'as_low_as'">
+                <p class="minimal-price">
+                    <?= /* @noEscape */ $renderAmount('priceView().minPrice', (string)__('As low as')) ?>
+                </p>
+            </template>
+            <template x-if="priceView().type === 'bundle' && priceView().bundleView === 'range'">
+                <p class="price-from">
+                    <?= /* @noEscape */ $renderAmount('priceView().minPrice', (string)__('From')) ?>
+                </p>
+            </template>
+            <template x-if="priceView().type === 'bundle' && priceView().bundleView === 'range'">
+                <p class="price-to">
+                    <?= /* @noEscape */ $renderAmount('priceView().maxPrice', (string)__('To')) ?>
+                </p>
+            </template>
+            <?= /* @noEscape */ $renderAmount("priceView().type === 'bundle' && priceView().bundleView === 'single' ? priceView().minPrice : null") ?>
+            <template x-if="priceView().type === 'configurable'">
+                <span class="normal-price" :class="{ 'special-price': priceView().hasSpecialPrice }">
+                    <?= /* @noEscape */ $renderAmount('priceView().isRange ? priceView().finalPrice : null', (string)__('As low as')) ?>
+                    <?= /* @noEscape */ $renderAmount('!priceView().isRange ? priceView().finalPrice : null') ?>
+                </span>
+            </template>
+            <template x-if="priceView().type === 'configurable' && priceView().oldPrice">
+                <span class="old-price sly-old-price" :class="{ 'hidden': !priceView().hasSpecialPrice }">
+                    <?= /* @noEscape */ $renderAmount('priceView().oldPrice', (string)__('Regular Price')) ?>
+                </span>
+            </template>
+            <template x-if="priceView().type === 'default' && priceView().hasSpecialPrice">
+                <span class="special-price">
+                    <?= /* @noEscape */ $renderAmount('priceView().finalPrice', (string)__('Special Price')) ?>
+                </span>
+            </template>
+            <template x-if="priceView().type === 'default' && priceView().hasSpecialPrice">
+                <span class="old-price">
+                    <?= /* @noEscape */ $renderAmount('priceView().oldPrice', (string)__('Regular Price')) ?>
+                </span>
+            </template>
+            <?= /* @noEscape */ $renderAmount("priceView().type === 'default' && !priceView().hasSpecialPrice ? priceView().finalPrice : null") ?>
+            <template x-if="priceView().type === 'default' && priceView().minimalPrice">
+                <a :href="priceView().productUrl" class="minimal-price-link">
+                    <?= /* @noEscape */ $renderAmount('priceView().minimalPrice', (string)__('As low as'), 'price-final_price tax weee', false) ?>
+                </a>
+            </template>
+        </div>
+    </div>
+</template>

@@ -41,13 +41,6 @@ use Magento\Framework\Escaper;
                 return this.activeTooltipItem;
             },
 
-            isFirstItemCol() {
-                const left = this.tooltipPositionElement.offsetLeft;
-                const leftParent = this.tooltipPositionElement.parentNode.offsetLeft;
-                const width = this.tooltipPositionElement.offsetWidth;
-                return left - leftParent < width;
-            },
-
             getTooltipImageStyle() {
                 const type = this.activeTooltipItem.type;
 
@@ -62,20 +55,22 @@ use Magento\Framework\Escaper;
             },
 
             getTooltipPosition() {
-                return this.tooltipPositionElement
-                    ? (
-                        `top: ${this.tooltipPositionElement.offsetTop}px;` +
-                        `left: ${this.tooltipPositionElement.offsetLeft}px;`
-                    )
-                    : '';
+                if (!this.tooltipPositionElement) {
+                    return '';
+                }
+
+                const rect = this.tooltipPositionElement.getBoundingClientRect();
+
+                return {
+                    position: 'fixed',
+                    bottom: `${window.innerHeight - rect.top}px`,
+                    left: `${rect.left + rect.width / 2}px`,
+                    translate: '-50% 0'
+                };
             },
 
             getTooltipLabel() {
                 return this.activeTooltipItem.label || '';
-            },
-
-            isVisualSwatch() {
-                return this.getSwatchType(this.activeTooltipItem.type) !== 'text';
             }
         }
     }

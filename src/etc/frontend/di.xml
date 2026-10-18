@@ -53,6 +53,11 @@
                     <item name="global" xsi:type="string">MeilisearchUrlManager</item>
                     <item name="src" xsi:type="string">Walkwizus_MeilisearchFrontend::js/service/url-manager.js</item>
                 </item>
+                <item name="meilisearch-product-render" xsi:type="array">
+                    <item name="name" xsi:type="string">meilisearchProductRenderLoader</item>
+                    <item name="global" xsi:type="string">MeilisearchProductRender</item>
+                    <item name="src" xsi:type="string">Walkwizus_MeilisearchFrontend::js/service/product-render.js</item>
+                </item>
                 <item name="meilisearch-fuse" xsi:type="array">
                     <item name="name" xsi:type="string">meilisearchFuseLoader</item>
                     <item name="global" xsi:type="string">Fuse</item>

@@ -9,6 +9,7 @@
                 meilisearchFacets: null,
                 meilisearchQueryBuilder: null,
                 meilisearchUrlManager: null,
+                meilisearchProductRender: null,
                 meilisearchFragments: [],
                 initialState: null,
                 isHydrated: false,
@@ -55,13 +56,15 @@
                         MeilisearchDisjunctiveSearch,
                         MeilisearchFacets,
                         MeilisearchQueryBuilder,
-                        MeilisearchUrlManager
+                        MeilisearchUrlManager,
+                        MeilisearchProductRender
                     ] = await Promise.all([
                         window.meilisearchLoader(),
                         window.meilisearchDisjunctiveSearchLoader(),
                         window.meilisearchFacetsLoader(),
                         window.meilisearchQueryBuilderLoader(),
-                        window.meilisearchUrlManagerLoader()
+                        window.meilisearchUrlManagerLoader(),
+                        window.meilisearchProductRenderLoader()
                     ]);
 
                     meilisearchClient = new Meilisearch({
@@ -73,6 +76,7 @@
                     this.meilisearchFacets = MeilisearchFacets;
                     this.meilisearchQueryBuilder = MeilisearchQueryBuilder;
                     this.meilisearchUrlManager = MeilisearchUrlManager;
+                    this.meilisearchProductRender = MeilisearchProductRender;
 
                     const urlState = this.meilisearchUrlManager.getStateFromUrl();
                     const defaultMode = (this.meilisearchConfig.defaultViewMode || 'grid').toLowerCase();
@@ -127,7 +131,9 @@
                     const searchQuery = this.state.searchQuery;
                     const sortField = this.state.sortBy ?? this.meilisearchConfig.defaultSortBy;
                     const sortDirection = this.state.isDescending ? 'desc' : 'asc';
-                    const sortParams = sortField ? [`${sortField}:${sortDirection}`] : undefined;
+                    const sortParams = sortField && sortField !== 'relevance'
+                        ? [`${sortField}:${sortDirection}`]
+                        : undefined;
 
                     const selected = this.state.selectedFacets;
                     const activeFacetCodes = Object.keys(selected);
@@ -365,8 +371,12 @@
                     this.performSearch();
                 },
 
+                isSortDirectionDisabled() {
+                    return !this.state.sortBy || this.state.sortBy === 'relevance';
+                },
+
                 toggleSortDirection() {
-                    if (!this.state.sortBy) {
+                    if (this.isSortDirectionDisabled()) {
                         return;
                     }
 

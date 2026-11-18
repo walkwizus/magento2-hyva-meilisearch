@@ -2,20 +2,37 @@
 
 declare(strict_types=1);
 
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\WalkwizusMeilisearch\ViewModel\ProductActions;
+use Hyva\WalkwizusMeilisearch\ViewModel\ProductSwatches;
 use Magento\Framework\View\Element\Template;
 
 /**
  * @var Template $block
+ * @var ViewModelRegistry $viewModels
  */
+$productActions = $viewModels->require(ProductActions::class);
+$productActionsConfig = [
+    'addToCartUrl' => $productActions->getAddToCartUrlTemplate(),
+    'productIdPlaceholder' => ProductActions::PRODUCT_ID_PLACEHOLDER,
+    'configureOnProductPageTypes' => $productActions->getConfigureOnProductPageTypes(),
+];
+$swatchConfig = $viewModels->require(ProductSwatches::class)->getConfig();
+$jsonFlags = JSON_UNESCAPED_SLASHES | JSON_HEX_TAG;
 ?>
 <script>
+    const meilisearchProductActionsConfig = <?= /* @noEscape */ json_encode($productActionsConfig, $jsonFlags) ?>;
+    const meilisearchSwatchConfig = <?= /* @noEscape */ json_encode($swatchConfig, $jsonFlags) ?>;
+
     function meilisearchHitRender(hit) {
         const store = () => Alpine.store('meilisearch');
         const render = () => store().meilisearchProductRender;
         const priceAttributeCode = () => store().meilisearchConfig.priceAttributeCode;
         let priceViewCache;
 
-        return {
+        const swatchTooltip = typeof initSwatchOptions === 'function' ? initSwatchOptions() : {};
+
+        return Object.assign(swatchTooltip, {
             selection: {},
             swatchAttributes: null,
 
@@ -89,21 +106,89 @@ use Magento\Framework\View\Element\Template;
                 this.selection = render().toggleOption(this.selection, attribute.attribute_id, option.value);
             },
 
-            selectedLabel(attribute) {
-                return render().getSelectedOptionLabel(attribute, this.selection);
-            },
-
             swatchKind(option) {
                 return render().getSwatchKind(option);
             },
 
-            swatchStyle(option) {
-                return render().getSwatchStyle(option, store().meilisearchConfig.mediaUrl);
-            },
-
             swatchText(option) {
                 return render().getSwatchText(option);
+            },
+
+            isSaleable() {
+                return !!(hit.stock && hit.stock.is_in_stock);
+            },
+
+            mustBeConfiguredOnProductPage() {
+                return meilisearchProductActionsConfig.configureOnProductPageTypes.includes(hit.type_id);
+            },
+
+            addToCartUrl() {
+                return meilisearchProductActionsConfig.addToCartUrl
+                    .replace(meilisearchProductActionsConfig.productIdPlaceholder, hit.id);
+            },
+
+            formKey() {
+                return hyva.getFormKey();
+            },
+
+            formId() {
+                return 'product_addtocart_form_' + hit.id;
+            },
+
+            swatchConfig() {
+                return meilisearchSwatchConfig;
+            },
+
+            swatchInputId(attribute, option) {
+                return 'attribute-option' + hit.id + '-' + attribute.attribute_id + '-' + option.value;
+            },
+
+            isVisualSwatch(option) {
+                return this.swatchKind(option) !== 'text';
+            },
+
+            swatchImageUrl(option) {
+                const base = String(store().meilisearchConfig.mediaUrl || '').replace(/\/+$/, '');
+                const path = String(option.swatch_image || '').replace(/^\/+/, '');
+
+                return path ? base + '/' + path : '';
+            },
+
+            swatchColorStyle(option) {
+                return {
+                    width: meilisearchSwatchConfig.imageWidth + 'px',
+                    height: meilisearchSwatchConfig.imageHeight + 'px',
+                    backgroundColor: option.swatch_value
+                };
+            },
+
+            swatchTooltip(option) {
+                if (!meilisearchSwatchConfig.showTooltip || !this.isVisualSwatch(option)) {
+                    return null;
+                }
+
+                const kind = this.swatchKind(option);
+
+                return JSON.stringify({
+                    preview: kind === 'image' ? this.swatchImageUrl(option) : option.swatch_value,
+                    label: option.label,
+                    type: kind,
+                    width: meilisearchSwatchConfig.thumbWidth,
+                    height: meilisearchSwatchConfig.thumbHeight
+                });
+            },
+
+            showSwatchTooltip(event, option) {
+                if (this.swatchTooltip(option) && typeof this.showTooltip === 'function') {
+                    this.showTooltip(event);
+                }
+            },
+
+            hideSwatchTooltip() {
+                if (typeof this.hideTooltip === 'function') {
+                    this.hideTooltip();
+                }
             }
-        };
+        });
     }
 </script>

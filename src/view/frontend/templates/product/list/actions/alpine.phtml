@@ -1,0 +1,84 @@
+<?php
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\LucideIcons;
+use Hyva\WalkwizusMeilisearch\ViewModel\ProductActions;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * @var Escaper $escaper
+ * @var Template $block
+ * @var ViewModelRegistry $viewModels
+ */
+$actions = $viewModels->require(ProductActions::class);
+$lucideIcons = $viewModels->require(LucideIcons::class);
+$isListMode = "\$store.meilisearch.viewModeState.mode === 'list'";
+$labelHiddenOnMd = "{ 'md:hidden lg:inline': !($isListMode) }";
+?>
+<form method="post"
+      :id="formId()"
+      :action="addToCartUrl()"
+      class="product_addtocart_form mt-auto pt-3 flex flex-wrap justify-between items-center gap-y-4 gap-x-2"
+>
+    <input type="hidden" name="form_key" :value="formKey()">
+    <input type="hidden" name="product" :value="hit.id">
+    <template x-if="isSaleable() && mustBeConfiguredOnProductPage()">
+        <a
+            :href="$store.meilisearch.getProductUrl(hit.url_key)"
+            class="btn btn-primary text-sm"
+            :aria-label="'<?= $escaper->escapeHtmlAttr($escaper->escapeJs(__('Configure %1 on the product page', '%1'))) ?>'.replace('%1', hit.name)"
+        >
+            <?= /* @noEscape */ $lucideIcons->pencilHtml('', 24, 24, ['aria-hidden' => 'true']) ?>
+            <span class="inline" :class="<?= $escaper->escapeHtmlAttr($labelHiddenOnMd) ?>">
+                <?= $escaper->escapeHtml(__('Configure')) ?>
+            </span>
+        </a>
+    </template>
+    <template x-if="isSaleable() && !mustBeConfiguredOnProductPage()">
+        <button
+            class="btn btn-primary text-sm"
+            :aria-label="'<?= $escaper->escapeHtmlAttr($escaper->escapeJs(__('Add to Cart'))) ?> ' + hit.name"
+            data-addto="cart"
+        >
+            <?= /* @noEscape */ $lucideIcons->shoppingCartHtml('', 24, 24, ['aria-hidden' => 'true']) ?>
+            <span class="inline" :class="<?= $escaper->escapeHtmlAttr($labelHiddenOnMd) ?>">
+                <?= $escaper->escapeHtml(__('Add to Cart')) ?>
+            </span>
+        </button>
+    </template>
+    <template x-if="!isSaleable()">
+        <div>
+            <p class="flex items-center align-middle gap-x-2 stock unavailable
+                      before:w-3 before:h-3 before:rounded-full before:shrink-0 before:bg-red-500"
+               title="<?= $escaper->escapeHtmlAttr(__('Availability')) ?>"
+            ><?= $escaper->escapeHtml(__('Out of stock')) ?></p>
+        </div>
+    </template>
+    <div class="flex flex-wrap gap-2">
+        <?php if ($actions->isWishlistEnabled()): ?>
+            <button x-data="initWishlist()"
+                    @click.prevent="addToWishlist(hit.id)"
+                    :aria-label="'<?= $escaper->escapeHtmlAttr($escaper->escapeJs(__('Add to Wish List'))) ?> ' + hit.name"
+                    type="button"
+                    class="btn p-2 rounded-full"
+                    data-addto="wishlist"
+            >
+                <?= /* @noEscape */ $lucideIcons->heartHtml('', 20, 20, ['aria-hidden' => 'true']) ?>
+            </button>
+        <?php endif; ?>
+        <?php if ($actions->isCompareEnabled()): ?>
+            <button x-data="initCompareOnProductList()"
+                    @click.prevent="addToCompare(hit.id)"
+                    :aria-label="'<?= $escaper->escapeHtmlAttr($escaper->escapeJs(__('Add to Compare'))) ?> ' + hit.name"
+                    type="button"
+                    class="btn p-2 rounded-full"
+                    data-addto="compare"
+            >
+                <?= /* @noEscape */ $lucideIcons->scaleHtml('', 20, 20, ['aria-hidden' => 'true']) ?>
+            </button>
+        <?php endif; ?>
+    </div>
+</form>

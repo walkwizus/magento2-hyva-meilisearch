@@ -11,7 +11,17 @@
             <block name="meilisearch.frontend.search.product.price.alpine" template="Hyva_WalkwizusMeilisearch::product/price/alpine.phtml">
                 <block name="meilisearch.frontend.search.product.price.alpine.amount" as="amount" template="Hyva_WalkwizusMeilisearch::product/price/alpine/amount.phtml"/>
             </block>
+            <block name="meilisearch.frontend.search.product.list.actions" template="Hyva_WalkwizusMeilisearch::product/list/actions.phtml"/>
+            <block name="meilisearch.frontend.search.product.swatches.alpine" template="Hyva_WalkwizusMeilisearch::product/list/swatches/alpine.phtml">
+                <block name="meilisearch.frontend.search.product.swatches.alpine.tooltip" as="tooltip" template="Magento_Swatches::product/tooltip.phtml"/>
+            </block>
+            <block name="meilisearch.frontend.search.product.list.actions.alpine" template="Hyva_WalkwizusMeilisearch::product/list/actions/alpine.phtml"/>
         </referenceBlock>
+        <referenceContainer name="before.body.end">
+            <block name="meilisearch.frontend.search.product.list.js.wishlist" template="Magento_Catalog::product/list/js/wishlist.phtml"/>
+            <block name="meilisearch.frontend.search.product.list.js.compare" template="Magento_Catalog::product/list/js/compare.phtml"/>
+            <block name="meilisearch.frontend.search.product.list.js.swatch-options" template="Magento_Swatches::product/js/swatch-options.phtml" ifconfig="catalog/frontend/show_swatches_in_product_list"/>
+        </referenceContainer>
         <referenceBlock name="meilisearch.frontend.layers">
             <block name="meilisearch.frontend.layers.active" template="Hyva_WalkwizusMeilisearch::layers/active.phtml"/>
             <block name="meilisearch.frontend.layers.type.swatch" template="Hyva_WalkwizusMeilisearch::layers/type/swatch.phtml"/>

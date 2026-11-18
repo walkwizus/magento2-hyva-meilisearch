@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-use Magento\Framework\View\Element\Template;
-use Magento\Framework\Escaper;
 use Hyva\Theme\Model\ViewModelRegistry;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
 use Walkwizus\MeilisearchFrontend\ViewModel\Ssr;
 
 /**
@@ -25,6 +25,7 @@ $imageCfg = $config['images']['category_page_' . $viewMode] ?? ['type' => 'small
 $imageAttr = $imageCfg['type'] ?? 'small_image';
 $imagePath = $hit[$imageAttr] ?? ($hit['small_image'] ?? ($hit['image'] ?? ($hit['thumbnail'] ?? '')));
 $priceBlock = $block->getChildBlock('meilisearch.frontend.search.product.price');
+$actionsBlock = $block->getChildBlock('meilisearch.frontend.search.product.list.actions');
 ?>
 <?= $block->getChildHtml('meilisearch.frontend.search.js.hit-render') ?>
 
@@ -53,7 +54,7 @@ $priceBlock = $block->getChildBlock('meilisearch.frontend.search.product.price')
             >
                 <?php
                 $gridClass = 'mx-auto pt-4 pb-12 grid gap-4 grid-cols-1 ' . ($viewIsGrid ? 'sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3' : '');
-                ?>
+    ?>
                 <ul
                     role="list"
                     class="<?= $gridClass ?>"
@@ -86,12 +87,19 @@ $priceBlock = $block->getChildBlock('meilisearch.frontend.search.product.price')
                                         </a>
                                     </div>
                                     <?php $priceHtml = $priceBlock ? trim((string)$priceBlock
-                                        ->setData('hit', $hit)
-                                        ->setData('product_url', $ssr->getProductUrl($hit['url_key']))
-                                        ->toHtml()) : ''; ?>
+                            ->setData('hit', $hit)
+                            ->setData('product_url', $ssr->getProductUrl($hit['url_key']))
+                            ->toHtml()) : ''; ?>
                                     <?= /* @noEscape */ $priceHtml !== ''
-                                        ? $priceHtml
-                                        : $ssr->getProductPrice($hit[$config['priceAttributeCode']] ?? 0) ?>
+                            ? $priceHtml
+                            : $ssr->getProductPrice($hit[$config['priceAttributeCode']] ?? 0) ?>
+                                    <?php if ($actionsBlock): ?>
+                                        <?= /* @noEscape */ $actionsBlock
+                                ->setData('hit', $hit)
+                                ->setData('product_url', $ssr->getProductUrl($hit['url_key']))
+                                ->setData('view_is_grid', $viewIsGrid)
+                                ->toHtml() ?>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </li>
@@ -148,6 +156,7 @@ $priceBlock = $block->getChildBlock('meilisearch.frontend.search.product.price')
                                             x-text="hit.name"
                                         ></a>
                                     </div>
+                                    <?= $block->getChildHtml('meilisearch.frontend.search.product.swatches.alpine') ?>
                                     <?= $block->getChildHtml('meilisearch.frontend.search.product.price.alpine') ?>
                                     <template x-if="!priceView() && fallbackPrice()">
                                         <div class="price-box price-final_price text-center"
@@ -156,56 +165,10 @@ $priceBlock = $block->getChildBlock('meilisearch.frontend.search.product.price')
                                             <span class="price font-semibold" x-text="fallbackPrice()"></span>
                                         </div>
                                     </template>
-                                    <template x-if="attributes().length">
-                                        <div class="mt-2 space-y-1">
-                                            <template x-for="attribute in attributes()" :key="attribute.attribute_id">
-                                                <div class="swatch-attribute"
-                                                     :class="attribute.attribute_code"
-                                                     :data-attribute-code="attribute.attribute_code"
-                                                     :data-option-selected="selectedLabel(attribute)"
-                                                >
-                                                    <div class="swatch-attribute-options flex flex-wrap justify-center gap-2 py-1"
-                                                         :class="$store.meilisearch.viewModeState.mode === 'list' ? 'md:justify-start' : ''"
-                                                         role="group"
-                                                         :aria-label="attribute.label"
-                                                    >
-                                                        <template x-for="option in attribute.options" :key="option.value">
-                                                            <button
-                                                                type="button"
-                                                                class="swatch-option relative shadow-sm select-none bg-white border product-option-value-label"
-                                                                :class="{
-                                                                    'border-gray-100 ring ring-primary/50': isSelected(attribute, option),
-                                                                    'border-gray-300': !isSelected(attribute, option),
-                                                                    'w-6 h-6': swatchKind(option) !== 'text',
-                                                                    'px-2 py-0.5 text-sm whitespace-nowrap': swatchKind(option) === 'text',
-                                                                    'cursor-pointer': isAvailable(attribute, option),
-                                                                    'opacity-50 cursor-not-allowed': !isAvailable(attribute, option)
-                                                                }"
-                                                                :style="swatchStyle(option)"
-                                                                :title="option.label"
-                                                                :aria-label="option.label"
-                                                                :aria-pressed="isSelected(attribute, option) ? 'true' : 'false'"
-                                                                :disabled="!isAvailable(attribute, option)"
-                                                                :data-option-id="option.value"
-                                                                @click="select(attribute, option)"
-                                                            >
-                                                                <span x-show="swatchKind(option) === 'text'" x-text="swatchText(option)"></span>
-                                                                <svg x-show="!isAvailable(attribute, option)"
-                                                                     class="absolute inset-0 w-full h-full text-gray-500 bg-white/25 pointer-events-none"
-                                                                     aria-hidden="true"
-                                                                >
-                                                                    <line x1="0" y1="100%" x2="100%" y2="0" class="stroke-current stroke-1"></line>
-                                                                </svg>
-                                                            </button>
-                                                        </template>
-                                                    </div>
-                                                </div>
-                                            </template>
-                                        </div>
-                                    </template>
                                     <template x-for="fragment in $store.meilisearch.meilisearchFragments" :key="fragment">
                                         <div :data-fragment="fragment" :data-sku="hit.sku"></div>
                                     </template>
+                                    <?= $block->getChildHtml('meilisearch.frontend.search.product.list.actions.alpine') ?>
                                 </div>
                             </div>
                         </li>

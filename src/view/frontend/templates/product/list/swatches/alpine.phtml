@@ -1,0 +1,65 @@
+<?php
+
+declare(strict_types=1);
+
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * @var Escaper $escaper
+ * @var Template $block
+ */
+?>
+<template x-if="attributes().length">
+    <div class="mb-2 relative">
+        <template x-for="attribute in attributes()" :key="attribute.attribute_id">
+            <fieldset class="mt-4">
+                <legend class="mb-1 text-sm font-medium" x-text="attribute.label"></legend>
+                <div class="flex flex-wrap gap-1">
+                    <template x-for="option in attribute.options" :key="option.value">
+                        <label
+                            :for="swatchInputId(attribute, option)"
+                            class="swatch-option my-0"
+                            :data-swatch-type="isVisualSwatch(option) ? 'visual' : 'text'"
+                            @mouseenter.self="showSwatchTooltip($event, option)"
+                            @mouseleave.self="hideSwatchTooltip()"
+                        >
+                            <template x-if="swatchKind(option) === 'color'">
+                                <span class="block" :style="swatchColorStyle(option)"></span>
+                            </template>
+                            <template x-if="swatchKind(option) === 'image'">
+                                <img
+                                    :src="swatchImageUrl(option)"
+                                    :alt="option.label"
+                                    :width="swatchConfig().imageWidth"
+                                    :height="swatchConfig().imageHeight"
+                                    loading="lazy"
+                                >
+                            </template>
+                            <span
+                                :class="{ 'sr-only': isVisualSwatch(option) }"
+                                x-text="isVisualSwatch(option) ? option.label : swatchText(option)"
+                            ></span>
+                            <input
+                                :id="swatchInputId(attribute, option)"
+                                type="radio"
+                                :form="formId()"
+                                :name="'super_attribute[' + attribute.attribute_id + ']'"
+                                :value="option.value"
+                                :checked="isSelected(attribute, option)"
+                                :disabled="!isAvailable(attribute, option)"
+                                :data-attribute-id="attribute.attribute_id"
+                                :data-option-label="option.label"
+                                :data-tooltip="swatchTooltip(option)"
+                                @change="select(attribute, option)"
+                                required
+                                class="opacity-0 size-full m-0"
+                            >
+                        </label>
+                    </template>
+                </div>
+            </fieldset>
+        </template>
+        <?= $block->getChildHtml('tooltip') ?>
+    </div>
+</template>

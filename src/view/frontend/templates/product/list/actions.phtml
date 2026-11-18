@@ -1,0 +1,87 @@
+<?php
+
+declare(strict_types=1);
+
+use Hyva\Theme\Model\ViewModelRegistry;
+use Hyva\Theme\ViewModel\LucideIcons;
+use Hyva\WalkwizusMeilisearch\ViewModel\ProductActions;
+use Magento\Framework\Escaper;
+use Magento\Framework\View\Element\Template;
+
+/**
+ * @var Escaper $escaper
+ * @var Template $block
+ * @var ViewModelRegistry $viewModels
+ */
+$actions = $viewModels->require(ProductActions::class);
+$lucideIcons = $viewModels->require(LucideIcons::class);
+$hit = (array)$block->getData('hit');
+$productUrl = (string)$block->getData('product_url');
+$viewIsGrid = (bool)$block->getData('view_is_grid');
+$productId = (int)($hit['id'] ?? 0);
+$productName = (string)($hit['name'] ?? '');
+$isSaleable = $actions->isSaleable($hit);
+?>
+<form method="post"
+      action="<?= $escaper->escapeUrl($actions->getAddToCartUrl($productId)) ?>"
+      class="product_addtocart_form mt-auto pt-3 flex flex-wrap justify-between items-center gap-y-4 gap-x-2"
+>
+    <?= /* @noEscape */ $block->getBlockHtml('formkey') ?>
+    <input type="hidden" name="product" value="<?= /* @noEscape */ $productId ?>">
+    <?php if ($isSaleable): ?>
+        <?php if ($actions->mustBeConfiguredOnProductPage($hit)): ?>
+            <a
+                href="<?= $escaper->escapeUrl($productUrl) ?>"
+                class="btn btn-primary text-sm"
+                aria-label="<?= $escaper->escapeHtmlAttr(__('Configure %1 on the product page', $productName)) ?>"
+            >
+                <?= /* @noEscape */ $lucideIcons->pencilHtml('', 24, 24, ['aria-hidden' => 'true']) ?>
+                <span class="inline <?= $viewIsGrid ? 'md:hidden lg:inline' : '' ?>">
+                    <?= $escaper->escapeHtml(__('Configure')) ?>
+                </span>
+            </a>
+        <?php else: ?>
+            <button
+                class="btn btn-primary text-sm"
+                aria-label="<?= $escaper->escapeHtmlAttr(__('Add to Cart') . ' ' . $productName) ?>"
+                data-addto="cart"
+            >
+                <?= /* @noEscape */ $lucideIcons->shoppingCartHtml('', 24, 24, ['aria-hidden' => 'true']) ?>
+                <span class="inline <?= $viewIsGrid ? 'md:hidden lg:inline' : '' ?>">
+                    <?= $escaper->escapeHtml(__('Add to Cart')) ?>
+                </span>
+            </button>
+        <?php endif; ?>
+    <?php else: ?>
+        <div>
+            <p class="flex items-center align-middle gap-x-2 stock unavailable
+                      before:w-3 before:h-3 before:rounded-full before:shrink-0 before:bg-red-500"
+               title="<?= $escaper->escapeHtmlAttr(__('Availability')) ?>"
+            ><?= $escaper->escapeHtml(__('Out of stock')) ?></p>
+        </div>
+    <?php endif; ?>
+    <div class="flex flex-wrap gap-2">
+        <?php if ($actions->isWishlistEnabled()): ?>
+            <button x-data="initWishlist()"
+                    @click.prevent="addToWishlist(<?= /* @noEscape */ $productId ?>)"
+                    aria-label="<?= $escaper->escapeHtmlAttr(__('Add to Wish List') . ' ' . $productName) ?>"
+                    type="button"
+                    class="btn p-2 rounded-full"
+                    data-addto="wishlist"
+            >
+                <?= /* @noEscape */ $lucideIcons->heartHtml('', 20, 20, ['aria-hidden' => 'true']) ?>
+            </button>
+        <?php endif; ?>
+        <?php if ($actions->isCompareEnabled()): ?>
+            <button x-data="initCompareOnProductList()"
+                    @click.prevent="addToCompare(<?= /* @noEscape */ $productId ?>)"
+                    aria-label="<?= $escaper->escapeHtmlAttr(__('Add to Compare') . ' ' . $productName) ?>"
+                    type="button"
+                    class="btn p-2 rounded-full"
+                    data-addto="compare"
+            >
+                <?= /* @noEscape */ $lucideIcons->scaleHtml('', 20, 20, ['aria-hidden' => 'true']) ?>
+            </button>
+        <?php endif; ?>
+    </div>
+</form>

@@ -517,10 +517,9 @@
                 getListImageConfig() {
                     const mode = (this.viewModeState.mode || (this.meilisearchConfig.defaultViewMode || 'grid')).toLowerCase();
                     const key  = 'category_page_' + mode;
+                    const images = this.meilisearchConfig.images || {};
 
-                    return (this.meilisearchConfig.images && this.meilisearchConfig.images[key])
-                        ? this.meilisearchConfig.images[key]
-                        : { type: 'small_image', width: 240, height: 300 };
+                    return images[key] || images.category_page_grid || { type: 'small_image', width: 240, height: 300 };
                 },
 
                 getHitImagePath(hit) {
@@ -543,17 +542,16 @@
                     return path ? this.getProductImage(path) : '';
                 },
 
-                getProductImage(image) {
-                    const cfg = this.getListImageConfig();
-                    const base = (this.meilisearchConfig.mediaBaseUrl || '').replace(/\/+$/, '');
+                buildCachedImageUrl(image, cfg) {
                     const path = String(image || '').replace(/^\/+/, '');
-                    if (!path) return '';
+                    const prefix = cfg && cfg.urlPrefix;
+                    if (!path || !prefix) return '';
 
-                    const hash = cfg && cfg.hash;
+                    return prefix + path + (cfg.urlSuffix || '');
+                },
 
-                    return hash
-                        ? `${base}/cache/${hash}/${path}`
-                        : `${base}/${path}`;
+                getProductImage(image) {
+                    return this.buildCachedImageUrl(image, this.getListImageConfig());
                 },
 
                 getAutocompleteImage(hit) {
@@ -568,15 +566,7 @@
                                 : (hit.image && hit.image !== 'no_selection') ? hit.image
                                     : '';
 
-                    if (!path) return '';
-
-                    const base = (this.meilisearchConfig.mediaBaseUrl || '').replace(/\/+$/, '');
-                    const cleanPath = String(path).replace(/^\/+/, '');
-                    const hash = cfg.hash;
-
-                    return hash
-                        ? `${base}/cache/${hash}/${cleanPath}`
-                        : `${base}/${cleanPath}`;
+                    return this.buildCachedImageUrl(path, cfg);
                 },
 
                 getProductUrl(urlKey) {
